@@ -84,11 +84,21 @@ def main():
     ap.add_argument("--cross-view", action="store_true", help="evaluate cross-view (exclude same view)")
     ap.add_argument("--per-view", action="store_true", help="report metrics per probe view and overall average")
     ap.add_argument("--export-csv", type=str, default="", help="optional CSV path to save per-view metrics")
+    ap.add_argument("--export-md", type=str, default="", help="optional Markdown path to save per-view table")
+    ap.add_argument("--preset", type=str, default="", choices=["", "casia-b-standard"], help="use a predefined protocol; overrides filters")
     ap.add_argument("--seq-len", type=int, default=30)
     ap.add_argument("--height", type=int, default=64)
     ap.add_argument("--width", type=int, default=44)
     ap.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     args = ap.parse_args()
+
+    # Apply preset if requested
+    if args.preset == "casia-b-standard":
+        args.views = args.views or "000,018,036,054,072,090,108,126,144,162,180"
+        args.gallery_conds = "nm"
+        args.gallery_cond_ids = "01,02,03,04"
+        args.probe_conds = "nm,bg,cl"
+        args.probe_cond_ids = "05,06,01,02,01,02"
 
     views = [v.strip() for v in args.views.split(",") if v.strip()] if args.views else None
 
@@ -170,6 +180,16 @@ def main():
                 writer.writeheader()
                 for r in rows:
                     writer.writerow(r)
+        # export Markdown if requested
+        if args.export_md:
+            from pathlib import Path as _P
+            outp = _P(args.export_md)
+            outp.parent.mkdir(parents=True, exist_ok=True)
+            with open(outp, "w") as f:
+                f.write("| view | CMC@1 | CMC@5 | CMC@10 | mAP |\n")
+                f.write("|---:|---:|---:|---:|---:|\n")
+                for r in rows:
+                    f.write(f"| {r['view']} | {r['CMC@1']:.3f} | {r['CMC@5']:.3f} | {r['CMC@10']:.3f} | {r['mAP']:.3f} |\n")
     else:
         if args.cross_view:
             mask = pr_views[:, None] != gal_views[None, :]
