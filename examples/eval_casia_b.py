@@ -32,6 +32,32 @@ def cmc_map(query_feats, query_labels, gallery_feats, gallery_labels, ranks=(1, 
     return {f"CMC@{r}": cmc[r-1] for r in ranks} | {"mAP": mAP}
 
 
+def cmc_map_masked(query_feats, query_labels, gallery_feats, gallery_labels, valid_mask: np.ndarray, ranks=(1, 5, 10)):
+    # valid_mask: (Nq, Ng) boolean; True means allowed match
+    sims = query_feats @ gallery_feats.T
+    sims[~valid_mask] = -1e9
+    order = np.argsort(-sims, axis=1)
+    cmc = np.zeros(max(ranks)); ap_list = []
+    for i in range(order.shape[0]):
+        gt = query_labels[i]
+        ranking = order[i]
+        good = (gallery_labels[ranking] == gt).astype(np.int32)
+        if good.sum() == 0:
+            ap_list.append(0.0); continue
+        first_hit = np.argmax(good)
+        for r in range(max(ranks)):
+            if first_hit <= r:
+                cmc[r] += 1
+        hits=0; precisions=[]
+        for rank, g in enumerate(good, start=1):
+            if g==1:
+                hits += 1; precisions.append(hits/rank)
+        ap_list.append(np.mean(precisions))
+    cmc = cmc / order.shape[0]
+    mAP = float(np.mean(ap_list))
+    return {f"CMC@{r}": cmc[r-1] for r in ranks} | {"mAP": mAP}
+
+
 def _select_records(records: list[CasiaBRecord], conds: list[str], cond_ids: list[str], views: list[str] | None) -> list[CasiaBRecord]:
     out = []
     for r in records:
@@ -107,12 +133,15 @@ def main():
     gal_feats, gal_labels = embed(gal_loader)
     pr_feats, pr_labels = embed(pr_loader)
 
-    if args.cross_view and views is not None:
-        # If specific views provided, exclude identical-view matches by masking
-        # Here we approximate by evaluating on full gallery; for strict per-view, expand with view arrays
-        pass
+    # Build view arrays aligned with dataset order (shuffle=False preserves record order)
+    gal_views = np.array([int(r.view) for r in gal_records], dtype=np.int32)
+    pr_views = np.array([int(r.view) for r in pr_records], dtype=np.int32)
 
-    metrics = cmc_map(pr_feats, pr_labels, gal_feats, gal_labels)
+    if args.cross_view:
+        mask = pr_views[:, None] != gal_views[None, :]
+        metrics = cmc_map_masked(pr_feats, pr_labels, gal_feats, gal_labels, mask, ranks=(1,5,10))
+    else:
+        metrics = cmc_map(pr_feats, pr_labels, gal_feats, gal_labels)
     print({k: float(v) for k, v in metrics.items()})
 
 
