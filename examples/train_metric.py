@@ -181,9 +181,16 @@ if __name__ == "__main__":
         if ema is not None:
             ema.update(model if not isinstance(model, nn.parallel.DistributedDataParallel) else model.module)
         eval_stats = evaluate(model, classifier, ce_loss, loader, device)
+        eval_ema_acc = None
+        if ema is not None and ((not args.ddp) or dist.get_rank() == 0):
+            eval_ema = evaluate(ema.module, classifier, ce_loss, loader, device)
+            eval_ema_acc = eval_ema["acc"]
         scheduler.step()
         if (not args.ddp) or dist.get_rank() == 0:
-            print(f"Epoch {epoch:03d} | train ce={train_stats['ce']:.4f} tri={train_stats['tri']:.4f} | val ce={eval_stats['ce']:.4f} acc={eval_stats['acc']:.3f}")
+            msg = f"Epoch {epoch:03d} | train ce={train_stats['ce']:.4f} tri={train_stats['tri']:.4f} | val ce={eval_stats['ce']:.4f} acc={eval_stats['acc']:.3f}"
+            if eval_ema_acc is not None:
+                msg += f" | ema acc={eval_ema_acc:.3f}"
+            print(msg)
 
         if tb_writer:
             tb_writer.add_scalar("train/ce", train_stats['ce'], epoch)
@@ -218,10 +225,22 @@ if __name__ == "__main__":
             if eval_stats["acc"] >= best["acc"]:
                 best = eval_stats
                 save_checkpoint(state, out_dir / "best.pt")
+            if eval_ema_acc is not None:
+                state_ema = dict(state)
+                state_ema["model"] = (ema.module).state_dict()
+                state_ema["best"] = {"acc": eval_ema_acc}
+                save_checkpoint(state_ema, out_dir / "last_ema.pt")
+                # Track best ema acc in loop-local var (not persisted across restarts)
+                if "_best_ema_acc" not in locals():
+                    _best_ema_acc = 0.0
+                if eval_ema_acc >= _best_ema_acc:
+                    _best_ema_acc = eval_ema_acc
+                    save_checkpoint(state_ema, out_dir / "best_ema.pt")
 
     if tb_writer:
         tb_writer.close()
     if csv_logger:
         csv_logger.close()
     if (not args.ddp) or dist.get_rank() == 0:
-        print(f"Best acc: {best['acc']:.3f}")
+        tail = f", best ema acc: {_best_ema_acc:.3f}" if ('_best_ema_acc' in locals()) else ""
+        print(f"Best acc: {best['acc']:.3f}{tail}")
