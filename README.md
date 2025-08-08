@@ -141,6 +141,7 @@ torchrun --nproc_per_node=4 examples/eval_retrieval_multiview.py --config config
 ```
 
 ### Dataset preparation
+- More details: docs at `docs/data/preparation.md` and `docs/eval/protocols.md`
 - Generate a tiny toy dataset (multi-view friendly):
 ```bash
 uv run python examples/gen_toy_dataset.py --out ./toy_data --subjects 4 --seq-per-subject 3 --frames 20

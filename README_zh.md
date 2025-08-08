@@ -139,6 +139,7 @@ torchrun --nproc_per_node=4 examples/eval_retrieval_multiview.py --config config
 ```
 
 ### 数据集准备
+- 更多细节：参见 `docs/data/preparation.md` 与 `docs/eval/protocols.md`
 - 生成一个迷你数据集（支持多视角结构）：
 ```bash
 uv run python examples/gen_toy_dataset.py --out ./toy_data --subjects 4 --seq-per-subject 3 --frames 20
