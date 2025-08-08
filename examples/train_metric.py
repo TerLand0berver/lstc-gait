@@ -81,6 +81,7 @@ if __name__ == "__main__":
     parser.add_argument("--base-channels", type=int, default=16)
     parser.add_argument("--num-stripes", type=int, default=8)
     parser.add_argument("--embedding-dim", type=int, default=256)
+    parser.add_argument("--pooling-topk", type=int, default=2)
     parser.add_argument("--use-temporal", action="store_true", default=True)
     parser.add_argument("--use-spatial", action="store_true", default=True)
     parser.add_argument("--use-joint", action="store_true", default=True)
@@ -140,6 +141,7 @@ if __name__ == "__main__":
         base_channels=args.base_channels,
         num_stripes=args.num_stripes,
         embedding_dim=args.embedding_dim,
+        pooling_topk=args.pooling_topk,
         use_temporal=args.use_temporal,
         use_spatial=args.use_spatial,
         use_joint=args.use_joint,
