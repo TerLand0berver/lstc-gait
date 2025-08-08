@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install PyTorch CPU
+        run: |
+          python -m pip install --upgrade pip
+          pip install --index-url https://download.pytorch.org/whl/cpu \
+            torch torchvision torchaudio
+
+      - name: Install project deps
+        run: |
+          pip install -r requirements.txt --no-deps
+
+      - name: Sanity check
+        env:
+          PYTHONPATH: .
+        run: |
+          python examples/sanity_check.py
+
+      - name: Generate toy dataset
+        env:
+          PYTHONPATH: .
+        run: |
+          python examples/gen_toy_dataset.py --out ./toy_data --subjects 3 --seq-per-subject 2 --frames 8
+
+      - name: Train CE (toy, 1 epoch, CPU)
+        env:
+          PYTHONPATH: .
+        run: |
+          python examples/train_real.py --data-root ./toy_data --epochs 1 --batch-size 8 --seq-len 8 --device cpu
+
+      - name: Train CE+Triplet (toy, 1 epoch, CPU)
+        env:
+          PYTHONPATH: .
+        run: |
+          python examples/train_metric.py --data-root ./toy_data --epochs 1 --batch-p 2 --batch-k 2 --seq-len 8 --device cpu
