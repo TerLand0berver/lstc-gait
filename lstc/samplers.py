@@ -57,7 +57,9 @@ class PKSampler(Sampler[list[int]]):
                 id_pos[id_] = end
                 batch.extend(chosen)
 
-            if len(batch) == self.batch_p * self.batch_k:
+            # Yield when enough samples for current effective P×K (allow smaller batches on tiny datasets in non-DDP)
+            effective_pk = self.batch_p * self.batch_k
+            if len(batch) >= effective_pk:
                 # DDP-aware sharding of the batch (optional)
                 if dist.is_available() and dist.is_initialized():
                     world_size = dist.get_world_size()
@@ -68,7 +70,7 @@ class PKSampler(Sampler[list[int]]):
                     end = start + chunk
                     yield batch[start:end]
                 else:
-                    yield batch
+                    yield batch[:effective_pk]
                 batch = []
 
             # Stop condition: when most ids have exhausted a full pass
@@ -136,7 +138,8 @@ class MultiViewPKSampler(Sampler[list[int]]):
             if len(ids) < self.batch_p:
                 ids = self.ids[:]
                 self.random.shuffle(ids)
-            active_ids = [ids.pop() for _ in range(self.batch_p)]
+            active_p = min(self.batch_p, max(1, len(ids))) if not (dist.is_available() and dist.is_initialized()) else self.batch_p
+            active_ids = [ids.pop() for _ in range(active_p)]
 
             for id_ in active_ids:
                 view_map = self.id_to_view_to_indices[id_]
