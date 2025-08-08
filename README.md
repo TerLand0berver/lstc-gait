@@ -5,12 +5,14 @@ Learn discriminative gait features with local stripe priors.
 - Asymmetric block: temporal-only (kT,1,1), spatial-only (1,kH,kW), joint (LSTC), then fuse.
 - Local Spatio-Temporal Pooling (LSTP): stripe-wise top-k over time → average → concat.
 
+For Chinese documentation, see: [README_zh.md](README_zh.md)
+
 ### What's inside
 - `lstc/modules.py`: LSTC, asymmetric block, LSTP
 - `lstc/model.py`: reference backbone `LSTCBackbone`
 - `lstc/losses.py`, `lstc/samplers.py`, `lstc/utils.py`
 - Examples: `examples/` (toy/real/metric/multiview/train | eval | extract)
-- Configs: `configs/real.yaml`, `configs/metric.yaml`, `configs/multiview_real.yaml`, `configs/multiview_metric.yaml`
+- Configs: `configs/real.yaml`, `configs/metric.yaml`, `configs/multiview_real.yaml`, `configs/multiview_metric.yaml`, `configs/casia_b.yaml`
 
 ### Install (GPU with uv recommended)
 1) Create env and install PyTorch (choose CUDA build):
@@ -74,6 +76,24 @@ uv run python examples/eval_retrieval_multiview.py --config configs/multiview_re
   --ckpt runs/lstc_real_mv/best.pt
 ```
 
+### CASIA-B
+- Minimal CE training:
+```bash
+uv run python examples/train_casia_b.py \
+  --data-root /path/to/CASIA-B --conds nm \
+  --views 000,018,036,054,072,090,108,126,144,162,180 \
+  --seq-len 30 --epochs 50 --batch-size 32 --device cuda
+```
+- Evaluation (gallery/probe protocol, per-view CSV):
+```bash
+uv run python examples/eval_casia_b.py \
+  --data-root /path/to/CASIA-B --ckpt /path/to/best.pt \
+  --views 000,018,036,054,072,090,108,126,144,162,180 \
+  --gallery-conds nm --gallery-cond-ids 01,02,03,04 \
+  --probe-conds nm,bg,cl --probe-cond-ids 05,06,01,02,01,02 \
+  --per-view --cross-view --export-csv runs/casia_b_eval.csv
+```
+
 ### Distributed training and evaluation (DDP)
 - Launch with torchrun; batch-size is per-GPU.
 - Metric learning with (MultiView) PK requires P*K divisible by world_size (samplers shard each batch per rank).
@@ -93,7 +113,6 @@ torchrun --nproc_per_node=4 examples/eval_retrieval_multiview.py --config config
 ```bash
 uv run python examples/gen_toy_dataset.py --out ./toy_data --subjects 4 --seq-per-subject 3 --frames 20
 ```
-
 - Layout suggestion:
 ```
 /your_data_root/
