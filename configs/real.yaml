@@ -1,0 +1,35 @@
+# Base config for real-data CE training
+seed: 42
+amp: true
+
+# Data
+data_root: /path/to/your_data_root
+seq_len: 30
+height: 64
+width: 44
+num_workers: 4
+split_ratio: 0.9
+
+# Model
+in_channels: 1
+base_channels: 16
+num_stripes: 8
+embedding_dim: 256
+
+# Train
+epochs: 50
+batch_size: 32
+lr: 3e-4
+weight_decay: 0.05
+scheduler: cosine
+
+# Logging & ckpt
+out_dir: runs/lstc_real
+log_dir: runs/logs_real
+tensorboard: true
+csv_log: true
+resume: ""
+early_stop: 0
+
+# DDP
+use_ddp: false

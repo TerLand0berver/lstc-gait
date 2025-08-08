@@ -1,0 +1,38 @@
+# Multi-view training config (CE)
+seed: 42
+amp: true
+
+# Data (multi-view)
+data_roots:
+  - /path/to/view_0
+  - /path/to/view_1
+views_in_batch: 2  # number of views to sample per identity if applicable
+seq_len: 30
+height: 64
+width: 44
+num_workers: 4
+split_ratio: 0.9
+
+# Model
+in_channels: 1
+base_channels: 16
+num_stripes: 8
+embedding_dim: 256
+
+# Train
+epochs: 50
+batch_size: 32
+lr: 3e-4
+weight_decay: 0.05
+scheduler: cosine
+
+# Logging & ckpt
+out_dir: runs/lstc_real_mv
+log_dir: runs/logs_real_mv
+tensorboard: true
+csv_log: true
+resume: ""
+early_stop: 0
+
+# DDP
+use_ddp: false

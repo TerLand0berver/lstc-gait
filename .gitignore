@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual env
+.venv/
+
+# IDE/editor
+.vscode/
+.idea/
+.DS_Store
+
+# Runs, logs, checkpoints
+runs/
+*.pt
+*.pth
+
+# Generated data (toy/demo)
+*toy_data/
+toy_view0/
+toy_view1/
+data/
+
+# Cache
+*.log
