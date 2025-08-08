@@ -83,3 +83,43 @@ def create_tb_writer(log_dir: Path, enabled: bool) -> Optional[SummaryWriter]:
     log_dir = Path(log_dir)
     log_dir.mkdir(parents=True, exist_ok=True)
     return SummaryWriter(log_dir=str(log_dir))
+
+
+class ModelEma:
+    """Exponential Moving Average (EMA) of model parameters.
+    - Keeps a shadow copy of parameters updated as: ema = decay*ema + (1-decay)*param
+    - Buffers are copied (no EMA) by default.
+    """
+
+    def __init__(self, model: torch.nn.Module, decay: float = 0.999, device: Optional[torch.device] = None):
+        self.decay = decay
+        self.module = self._clone_model(model)
+        if device is not None:
+            self.module.to(device)
+        self.module.eval()
+
+    @torch.no_grad()
+    def _clone_model(self, model: torch.nn.Module) -> torch.nn.Module:
+        clone = type(model)(**getattr(model, 'init_kwargs', {})) if hasattr(model, 'init_kwargs') else None
+        if clone is None:
+            # Fallback to deepcopy
+            import copy
+            clone = copy.deepcopy(model)
+        clone.load_state_dict(model.state_dict(), strict=True)
+        for p in clone.parameters():
+            p.requires_grad_(False)
+        return clone
+
+    @torch.no_grad()
+    def update(self, model: torch.nn.Module):
+        ema_state = self.module.state_dict()
+        model_state = model.state_dict()
+        for k, v in ema_state.items():
+            if k in model_state and v.dtype.is_floating_point:
+                ema_state[k].mul_(self.decay).add_(model_state[k], alpha=1.0 - self.decay)
+            elif k in model_state:
+                ema_state[k].copy_(model_state[k])
+
+    @torch.no_grad()
+    def copy_to(self, model: torch.nn.Module):
+        model.load_state_dict(self.module.state_dict(), strict=False)

@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from lstc import LSTCBackbone
 from lstc.losses import BatchHardTripletLoss
 from lstc.samplers import PKSampler
-from lstc.utils import set_seed, is_main_process, CSVLogger, save_checkpoint, try_load_checkpoint, create_tb_writer
+from lstc.utils import set_seed, is_main_process, CSVLogger, save_checkpoint, try_load_checkpoint, create_tb_writer, ModelEma
 from examples.dataset_silhouette import scan_silhouette_root, GaitSilhouetteDataset
 from omegaconf import OmegaConf
 
@@ -93,6 +93,9 @@ if __name__ == "__main__":
     parser.add_argument("--csv-log", action="store_true")
     parser.add_argument("--log-dir", type=str, default="runs/logs_metric")
     parser.add_argument("--resume", type=str, default="")
+    parser.add_argument("--ema", action="store_true")
+    parser.add_argument("--ema-decay", type=float, default=0.999)
+    parser.add_argument("--grad-clip", type=float, default=0.0)
     parser.add_argument("--ddp", action="store_true", help="enable DistributedDataParallel; launch with torchrun")
     args = parser.parse_args()
 
@@ -166,8 +169,16 @@ if __name__ == "__main__":
     tb_writer = create_tb_writer(log_dir / "tb", enabled=(args.tensorboard and (not args.ddp or dist.get_rank() == 0)))
     csv_logger = CSVLogger(log_dir / "train.csv", ["epoch", "train_ce", "train_tri", "val_ce", "val_acc", "lr"]) if (args.csv_log and (not args.ddp or dist.get_rank() == 0)) else None
 
+    ema = ModelEma(model if not isinstance(model, nn.parallel.DistributedDataParallel) else model.module, decay=args.ema_decay) if args.ema else None
+
     for epoch in range(start_epoch, args.epochs + 1):
         train_stats = train_epoch(model, classifier, ce_loss, tri_loss, loader, optimizer, device, amp=args.amp)
+        # Grad clip
+        if args.grad_clip and args.grad_clip > 0:
+            torch.nn.utils.clip_grad_norm_(list(model.parameters()) + list(classifier.parameters()), max_norm=args.grad_clip)
+        # EMA update
+        if ema is not None:
+            ema.update(model if not isinstance(model, nn.parallel.DistributedDataParallel) else model.module)
         eval_stats = evaluate(model, classifier, ce_loss, loader, device)
         scheduler.step()
         if (not args.ddp) or dist.get_rank() == 0:

@@ -17,6 +17,7 @@ from lstc.utils import (
     save_checkpoint,
     try_load_checkpoint,
     create_tb_writer,
+    ModelEma,
 )
 from examples.dataset_silhouette import scan_silhouette_root, GaitSilhouetteDataset
 from omegaconf import OmegaConf
@@ -157,6 +158,9 @@ if __name__ == "__main__":
     parser.add_argument("--resume", type=str, default="")
     parser.add_argument("--early-stop", type=int, default=0, help="patience in epochs (0 disables)")
     parser.add_argument("--amp", action="store_true", help="use mixed precision")
+    parser.add_argument("--ema", action="store_true")
+    parser.add_argument("--ema-decay", type=float, default=0.999)
+    parser.add_argument("--grad-clip", type=float, default=0.0)
     parser.add_argument("--ddp", action="store_true", help="enable DistributedDataParallel; launch with torchrun")
     args = parser.parse_args()
 
@@ -230,10 +234,16 @@ if __name__ == "__main__":
     patience = args.early_stop
     bad_epochs = 0
 
+    ema = ModelEma(model if not isinstance(model, torch.nn.parallel.DistributedDataParallel) else model.module, decay=args.ema_decay) if args.ema else None
+
     for epoch in range(start_epoch, args.epochs + 1):
         if args.ddp and train_sampler is not None:
             train_sampler.set_epoch(epoch)
         tr_loss, tr_acc = train_one_epoch(model, classifier, criterion, optimizer, train_loader, device, amp=args.amp)
+        if args.grad_clip and args.grad_clip > 0:
+            torch.nn.utils.clip_grad_norm_(list(model.parameters()) + list(classifier.parameters()), max_norm=args.grad_clip)
+        if ema is not None:
+            ema.update(model if not isinstance(model, torch.nn.parallel.DistributedDataParallel) else model.module)
         va_loss, va_acc = evaluate(model, classifier, criterion, val_loader, device)
         scheduler.step()
 
