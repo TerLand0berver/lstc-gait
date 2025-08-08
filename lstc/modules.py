@@ -128,40 +128,63 @@ class AsymmetricSpatioTemporalBlock(nn.Module):
         kW: int = 3,
         num_stripes: int = 8,
         bias: bool = False,
+        use_temporal: bool = True,
+        use_spatial: bool = True,
+        use_joint: bool = True,
     ) -> None:
         super().__init__()
-        mid = max(out_channels // 2, 8)
+        enabled = [use_temporal, use_spatial, use_joint]
+        num_enabled = max(1, sum(1 for e in enabled if e))
+        mid_per = max(out_channels // (2 * num_enabled), 8)
 
-        self.branch_temporal = nn.Sequential(
-            nn.Conv3d(in_channels, mid, kernel_size=(kT, 1, 1), padding=(kT // 2, 0, 0), bias=bias),
-            nn.BatchNorm3d(mid),
-            nn.ReLU(inplace=True),
-        )
-        self.branch_spatial = nn.Sequential(
-            nn.Conv3d(in_channels, mid, kernel_size=(1, kH, kW), padding=(0, kH // 2, kW // 2), bias=bias),
-            nn.BatchNorm3d(mid),
-            nn.ReLU(inplace=True),
-        )
-        self.branch_joint = LocalSpatioTemporalConv(
-            in_channels=in_channels,
-            out_channels=mid,
-            kernel_t=kT,
-            kernel_h=kH,
-            kernel_w=kW,
-            num_stripes=num_stripes,
-            bias=bias,
-        )
+        self.use_temporal = use_temporal
+        self.use_spatial = use_spatial
+        self.use_joint = use_joint
+
+        if use_temporal:
+            self.branch_temporal = nn.Sequential(
+                nn.Conv3d(in_channels, mid_per, kernel_size=(kT, 1, 1), padding=(kT // 2, 0, 0), bias=bias),
+                nn.BatchNorm3d(mid_per),
+                nn.ReLU(inplace=True),
+            )
+        else:
+            self.branch_temporal = None
+        if use_spatial:
+            self.branch_spatial = nn.Sequential(
+                nn.Conv3d(in_channels, mid_per, kernel_size=(1, kH, kW), padding=(0, kH // 2, kW // 2), bias=bias),
+                nn.BatchNorm3d(mid_per),
+                nn.ReLU(inplace=True),
+            )
+        else:
+            self.branch_spatial = None
+        if use_joint:
+            self.branch_joint = LocalSpatioTemporalConv(
+                in_channels=in_channels,
+                out_channels=mid_per,
+                kernel_t=kT,
+                kernel_h=kH,
+                kernel_w=kW,
+                num_stripes=num_stripes,
+                bias=bias,
+            )
+        else:
+            self.branch_joint = None
+        fuse_in = mid_per * num_enabled
         self.fuse = nn.Sequential(
-            nn.Conv3d(mid * 3, out_channels, kernel_size=1, bias=bias),
+            nn.Conv3d(fuse_in, out_channels, kernel_size=1, bias=bias),
             nn.BatchNorm3d(out_channels),
             nn.ReLU(inplace=True),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        t = self.branch_temporal(x)
-        s = self.branch_spatial(x)
-        j = self.branch_joint(x)
-        y = torch.cat([t, s, j], dim=1)
+        feats = []
+        if self.use_temporal and self.branch_temporal is not None:
+            feats.append(self.branch_temporal(x))
+        if self.use_spatial and self.branch_spatial is not None:
+            feats.append(self.branch_spatial(x))
+        if self.use_joint and self.branch_joint is not None:
+            feats.append(self.branch_joint(x))
+        y = torch.cat(feats, dim=1) if len(feats) > 1 else feats[0]
         return self.fuse(y)
 
 
