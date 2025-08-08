@@ -38,15 +38,23 @@ if __name__ == "__main__":
     n_val = max(1, len(dataset) - n_train)
     train_set, val_set = random_split(dataset, [n_train, n_val])
 
-    # Option A: random shuffle per-sample
-    # train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=True)
-    # Option B: Multi-view PK sampling for better cross-view mixing
+    # Multi-view PK sampling for better cross-view mixing (auto-fit batch_p/batch_k)
     train_labels = []
     train_views = []
     for i in range(len(train_set)):
         _, y, v = train_set[i]
         train_labels.append(int(y)); train_views.append(int(v))
-    sampler = MultiViewPKSampler(labels=train_labels, view_ids=train_views, batch_p=8, batch_k=max(2, args.batch_size // 8), views_per_id=2)
+    num_ids = len(set(train_labels))
+    batch_p = max(2, min(8, num_ids))
+    batch_k = max(1, args.batch_size // batch_p)
+    sampler = MultiViewPKSampler(
+        labels=train_labels,
+        view_ids=train_views,
+        batch_p=batch_p,
+        batch_k=batch_k,
+        views_per_id=2,
+        balance_across_views=True,
+    )
     train_loader = DataLoader(train_set, batch_sampler=sampler, num_workers=args.num_workers, pin_memory=True)
     val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True)
 
