@@ -1,0 +1,31 @@
+# CASIA-B CE training (minimal)
+seed: 42
+amp: true
+
+# Data
+data_root: /path/to/CASIA-B
+views: ["000","018","036","054","072","090","108","126","144","162","180"]
+conds: ["nm"]
+seq_len: 30
+height: 64
+width: 44
+num_workers: 4
+
+# Model
+in_channels: 1
+base_channels: 16
+num_stripes: 8
+embedding_dim: 256
+
+# Train
+epochs: 50
+batch_size: 32
+lr: 3e-4
+weight_decay: 0.05
+scheduler: cosine
+
+# Logging
+out_dir: runs/casia_b
+log_dir: runs/logs_casia_b
+tensorboard: true
+csv_log: true
