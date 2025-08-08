@@ -25,6 +25,7 @@ def main():
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
     ckpt = out / "best.pt"
+    ckpt_ema = out / "best_ema.pt"
     csv = out / "eval_per_view.csv"
 
     # 1) Train CE
@@ -36,22 +37,26 @@ def main():
         "--epochs", str(args.epochs),
         "--batch-size", str(args.batch_size),
         "--device", args.device,
+        "--ema",
         "--out-dir", str(out),
     ]
     run(train_cmd)
 
     # 2) Evaluate per-view (cross-view), export CSV
+    # Prefer EMA checkpoint if available
+    ckpt_to_use = ckpt_ema if ckpt_ema.exists() else ckpt
+
     eval_cmd = [
         sys.executable, "examples/eval_casia_b.py",
         "--data-root", args.data_root,
-        "--ckpt", str(ckpt),
+        "--ckpt", str(ckpt_to_use),
         "--views", args.views,
         "--gallery-conds", "nm",
         "--gallery-cond-ids", "01,02,03,04",
         "--probe-conds", "nm,bg,cl",
         "--probe-cond-ids", "05,06,01,02,01,02",
-        "--per-view", "--cross-view",
-        "--export-csv", str(csv),
+        "--per-view", "--cross-view", "--preset", "casia-b-standard",
+        "--export-csv", str(csv), "--export-md", str(out / "eval_per_view.md"),
         "--seq-len", str(args.seq_len),
     ]
     run(eval_cmd)

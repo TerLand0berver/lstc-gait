@@ -24,6 +24,7 @@ def main():
 
     out = Path(args.out_dir); out.mkdir(parents=True, exist_ok=True)
     ckpt = out / "best.pt"
+    ckpt_ema = out / "best_ema.pt"
 
     # Train
     train_cmd = [
@@ -34,15 +35,18 @@ def main():
         "--epochs", str(args.epochs),
         "--batch-size", str(args.batch_size),
         "--device", args.device,
+        "--ema",
         "--out-dir", str(out),
     ]
     run(train_cmd)
 
     # Eval (self-gallery)
+    ckpt_to_use = ckpt_ema if ckpt_ema.exists() else ckpt
+
     eval_cmd = [
         sys.executable, "examples/eval_ou_mvlp.py",
         "--data-root", args.data_root,
-        "--ckpt", str(ckpt),
+        "--ckpt", str(ckpt_to_use),
         "--views", args.views,
         "--seq-len", str(args.seq_len),
     ]
