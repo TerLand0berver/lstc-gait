@@ -63,6 +63,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     cfg = OmegaConf.load(args.config)
+    cli = OmegaConf.create(vars(args))
+    cfg = OmegaConf.merge(cfg, cli)  # ensure CLI (e.g., --ckpt) is preserved/overrides
     args = argparse.Namespace(**OmegaConf.to_container(cfg, resolve=True))
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
