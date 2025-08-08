@@ -12,7 +12,7 @@ For Chinese documentation, see: [README_zh.md](README_zh.md)
 - `lstc/model.py`: reference backbone `LSTCBackbone`
 - `lstc/losses.py`, `lstc/samplers.py`, `lstc/utils.py`
 - Examples: `examples/` (toy/real/metric/multiview/train | eval | extract)
-- Configs: `configs/real.yaml`, `configs/metric.yaml`, `configs/multiview_real.yaml`, `configs/multiview_metric.yaml`, `configs/casia_b.yaml`
+- Configs: `configs/real.yaml`, `configs/metric.yaml`, `configs/multiview_real.yaml`, `configs/multiview_metric.yaml`, `configs/casia_b.yaml`, `configs/ou_mvlp.yaml`
 
 ### Install (GPU with uv recommended)
 1) Create env and install PyTorch (choose CUDA build):
@@ -92,6 +92,21 @@ uv run python examples/eval_casia_b.py \
   --gallery-conds nm --gallery-cond-ids 01,02,03,04 \
   --probe-conds nm,bg,cl --probe-cond-ids 05,06,01,02,01,02 \
   --per-view --cross-view --export-csv runs/casia_b_eval.csv
+```
+
+### OU-MVLP
+- Minimal CE training:
+```bash
+uv run python examples/train_ou_mvlp.py \
+  --data-root /path/to/OU-MVLP \
+  --views 000,015,030,045,060,075,090,180 \
+  --seq-len 30 --epochs 50 --batch-size 64 --device cuda
+```
+- Evaluation (self-gallery CMC/mAP):
+```bash
+uv run python examples/eval_ou_mvlp.py \
+  --data-root /path/to/OU-MVLP --ckpt /path/to/best.pt \
+  --views 000,015,030,045,060,075,090,180
 ```
 
 ### Distributed training and evaluation (DDP)

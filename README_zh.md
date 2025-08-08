@@ -10,7 +10,7 @@
 - `lstc/model.py`：参考骨干 `LSTCBackbone`
 - `lstc/losses.py`、`lstc/samplers.py`、`lstc/utils.py`
 - 示例：`examples/`（toy/real/metric/multiview 训练 | 评估 | 导出）
-- 配置：`configs/real.yaml`、`configs/metric.yaml`、`configs/multiview_real.yaml`、`configs/multiview_metric.yaml`
+- 配置：`configs/real.yaml`、`configs/metric.yaml`、`configs/multiview_real.yaml`、`configs/multiview_metric.yaml`、`configs/casia_b.yaml`、`configs/ou_mvlp.yaml`
 
 ### 安装（推荐 uv + GPU）
 1) 创建环境并安装 PyTorch（选择匹配的 CUDA 构建）：
@@ -72,6 +72,39 @@ uv run python examples/train_metric_multiview.py --config configs/multiview_metr
 ```bash
 uv run python examples/eval_retrieval_multiview.py --config configs/multiview_real.yaml \
   --ckpt runs/lstc_real_mv/best.pt
+```
+
+### CASIA-B
+- 最小 CE 训练：
+```bash
+uv run python examples/train_casia_b.py \
+  --data-root /path/to/CASIA-B --conds nm \
+  --views 000,018,036,054,072,090,108,126,144,162,180 \
+  --seq-len 30 --epochs 50 --batch-size 32 --device cuda
+```
+- 评估（gallery/probe 协议，逐视角 CSV）：
+```bash
+uv run python examples/eval_casia_b.py \
+  --data-root /path/to/CASIA-B --ckpt /path/to/best.pt \
+  --views 000,018,036,054,072,090,108,126,144,162,180 \
+  --gallery-conds nm --gallery-cond-ids 01,02,03,04 \
+  --probe-conds nm,bg,cl --probe-cond-ids 05,06,01,02,01,02 \
+  --per-view --cross-view --export-csv runs/casia_b_eval.csv
+```
+
+### OU-MVLP
+- 最小 CE 训练：
+```bash
+uv run python examples/train_ou_mvlp.py \
+  --data-root /path/to/OU-MVLP \
+  --views 000,015,030,045,060,075,090,180 \
+  --seq-len 30 --epochs 50 --batch-size 64 --device cuda
+```
+- 评估（自集合 CMC/mAP）：
+```bash
+uv run python examples/eval_ou_mvlp.py \
+  --data-root /path/to/OU-MVLP --ckpt /path/to/best.pt \
+  --views 000,015,030,045,060,075,090,180
 ```
 
 ### 分布式训练与评估（DDP）
