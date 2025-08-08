@@ -18,6 +18,14 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
+      - name: Restore pip cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install PyTorch CPU
         run: |
           python -m pip install --upgrade pip
@@ -34,11 +42,13 @@ jobs:
         run: |
           python examples/sanity_check.py
 
-      - name: Generate toy dataset
+      - name: Generate toy datasets (single & multiview)
         env:
           PYTHONPATH: .
         run: |
           python examples/gen_toy_dataset.py --out ./toy_data --subjects 3 --seq-per-subject 2 --frames 8
+          python examples/gen_toy_dataset.py --out ./toy_view0 --subjects 3 --seq-per-subject 2 --frames 8 --seed 101
+          python examples/gen_toy_dataset.py --out ./toy_view1 --subjects 3 --seq-per-subject 2 --frames 8 --seed 202
 
       - name: Train CE (toy, 1 epoch, CPU)
         env:
@@ -51,3 +61,37 @@ jobs:
           PYTHONPATH: .
         run: |
           python examples/train_metric.py --data-root ./toy_data --epochs 1 --batch-p 2 --batch-k 2 --seq-len 8 --device cpu
+
+      - name: Train CE (multiview, 1 epoch, CPU)
+        env:
+          PYTHONPATH: .
+        run: |
+          cat > /tmp/mv.yaml <<'YAML'
+          seed: 42
+          amp: false
+          data_roots: ["./toy_view0", "./toy_view1"]
+          seq_len: 8
+          height: 64
+          width: 44
+          num_workers: 0
+          split_ratio: 0.8
+          in_channels: 1
+          base_channels: 16
+          num_stripes: 8
+          embedding_dim: 128
+          epochs: 1
+          batch_size: 8
+          lr: 3e-4
+          weight_decay: 0.05
+          out_dir: runs/lstc_real_mv
+          log_dir: runs/logs_real_mv
+          tensorboard: false
+          csv_log: false
+          YAML
+          python examples/train_real_multiview.py --config /tmp/mv.yaml
+
+      - name: Cross-view eval (self-gallery)
+        env:
+          PYTHONPATH: .
+        run: |
+          python examples/eval_retrieval_multiview.py --config /tmp/mv.yaml --ckpt runs/lstc_real_mv/best.pt
