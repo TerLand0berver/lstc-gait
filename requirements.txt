@@ -1,4 +1,4 @@
 numpy>=1.24
 Pillow>=10
 tensorboard>=2.14
-omegaconf>=2.3.0
+omegaconf==2.1.2
