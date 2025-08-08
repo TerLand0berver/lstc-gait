@@ -28,13 +28,14 @@ def build_dataloader_pk(data_root: Path, seq_len: int, height: int, width: int, 
 
 def train_epoch(model, classifier, ce_loss, tri_loss, loader, optimizer, device, amp: bool):
     model.train(); classifier.train()
-    scaler = torch.cuda.amp.GradScaler(enabled=amp)
+    use_cuda_amp = amp and (device.type == "cuda")
+    scaler = torch.amp.GradScaler('cuda') if use_cuda_amp else torch.amp.GradScaler(enabled=False)
     running = {"ce": 0.0, "tri": 0.0}
     for x, y in loader:
         x = x.to(device, non_blocking=True)
         y = y.to(device, non_blocking=True)
         optimizer.zero_grad(set_to_none=True)
-        with torch.cuda.amp.autocast(enabled=amp):
+        with torch.amp.autocast('cuda', enabled=use_cuda_amp):
             out = model(x)
             emb = out["embedding"]
             logits = classifier(emb)
