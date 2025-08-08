@@ -100,13 +100,21 @@ uv run python examples/eval_casia_b.py \
 uv run python examples/train_ou_mvlp.py \
   --data-root /path/to/OU-MVLP \
   --views 000,015,030,045,060,075,090,180 \
-  --seq-len 30 --epochs 50 --batch-size 64 --device cuda
+  --seq-len 30 --epochs 50 --batch-size 64 --device cuda --out-dir runs/ou_mvlp
 ```
 - Evaluation (self-gallery CMC/mAP):
 ```bash
 uv run python examples/eval_ou_mvlp.py \
-  --data-root /path/to/OU-MVLP --ckpt /path/to/best.pt \
+  --data-root /path/to/OU-MVLP --ckpt runs/ou_mvlp/best.pt \
   --views 000,015,030,045,060,075,090,180
+```
+- One-click pipeline:
+```bash
+uv run python examples/run_ou_mvlp_pipeline.py \
+  --data-root /path/to/OU-MVLP \
+  --views 000,015,030,045,060,075,090,180 \
+  --seq-len 30 --epochs 50 --batch-size 64 --device cuda \
+  --out-dir runs/ou_mvlp_pipeline
 ```
 
 ### Distributed training and evaluation (DDP)
