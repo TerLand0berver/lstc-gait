@@ -39,14 +39,16 @@ uv run python examples/sanity_check.py
 ```bash
 uv run python examples/train_toy.py --epochs 2 --device cuda
 ```
-- 真实数据（CE）：
+- 真实数据（CE）+ 训练增强：
 ```bash
 uv run python examples/train_real.py --data-root /path/to/data --epochs 50 --batch-size 32 --seq-len 30 --device cuda --amp \
+  --ema --ema-decay 0.999 --grad-clip 1.0 \
   --tensorboard --csv-log --log-dir runs/logs_real
 ```
 - 真实数据（CE+Triplet，PK）：
 ```bash
-uv run python examples/train_metric.py --data-root /path/to/data --epochs 50 --batch-p 8 --batch-k 4 --seq-len 30 --device cuda --amp
+uv run python examples/train_metric.py --data-root /path/to/data --epochs 50 --batch-p 8 --batch-k 4 --seq-len 30 --device cuda --amp \
+  --ema --grad-clip 1.0
 ```
 
 ### 配置驱动运行
