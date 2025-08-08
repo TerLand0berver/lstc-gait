@@ -69,9 +69,14 @@ uv run python examples/run_ablation.py \
   --data-root /path/to/data --seq-len 30 --epochs 10 --batch-size 32 \
   --device cuda --out runs/ablation
 ```
-- 其他可控项：
-  - `--pooling-topk`：时间选择的 top-k 消融（如 2/3/4）
-  - `--num-stripes`：条带数消融（如 6/8/10）
+- 扩展 sweep（S/top-k/分支），导出 CSV/Markdown 汇总：
+```bash
+uv run python examples/run_sweep.py \
+  --data-root /path/to/data --seq-len 30 --epochs 10 --batch-size 32 \
+  --device cuda --out runs/sweep \
+  --stripes 6,8,10 --topks 2,3,4 --modes tsj,t--,-s-,--j,ts-,t-j,-sj
+```
+- 报告模板：参见 `docs/reports/template.md`
 
 ### 多视角（跨视角）
 - 多视角 CE 训练：

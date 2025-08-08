@@ -71,9 +71,14 @@ uv run python examples/run_ablation.py \
   --data-root /path/to/data --seq-len 30 --epochs 10 --batch-size 32 \
   --device cuda --out runs/ablation
 ```
-- Additional knobs:
-  - `--pooling-topk` to ablate temporal selection (e.g., 2/3/4)
-  - `--num-stripes` to ablate stripe granularity (e.g., 6/8/10)
+- Extended sweep (S/top-k/branches) with CSV/Markdown summary:
+```bash
+uv run python examples/run_sweep.py \
+  --data-root /path/to/data --seq-len 30 --epochs 10 --batch-size 32 \
+  --device cuda --out runs/sweep \
+  --stripes 6,8,10 --topks 2,3,4 --modes tsj,t--,-s-,--j,ts-,t-j,-sj
+```
+- Report template: see `docs/reports/template.md`
 
 ### Multi-view (cross-view) usage
 - Train CE over multiple views:
