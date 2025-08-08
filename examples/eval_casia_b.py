@@ -82,6 +82,8 @@ def main():
     ap.add_argument("--probe-conds", type=str, default="nm,bg,cl", help="e.g., nm,bg,cl")
     ap.add_argument("--probe-cond-ids", type=str, default="05,06,01,02,01,02", help="nm:05,06; bg:01,02; cl:01,02")
     ap.add_argument("--cross-view", action="store_true", help="evaluate cross-view (exclude same view)")
+    ap.add_argument("--per-view", action="store_true", help="report metrics per probe view and overall average")
+    ap.add_argument("--export-csv", type=str, default="", help="optional CSV path to save per-view metrics")
     ap.add_argument("--seq-len", type=int, default=30)
     ap.add_argument("--height", type=int, default=64)
     ap.add_argument("--width", type=int, default=44)
@@ -137,12 +139,45 @@ def main():
     gal_views = np.array([int(r.view) for r in gal_records], dtype=np.int32)
     pr_views = np.array([int(r.view) for r in pr_records], dtype=np.int32)
 
-    if args.cross_view:
-        mask = pr_views[:, None] != gal_views[None, :]
-        metrics = cmc_map_masked(pr_feats, pr_labels, gal_feats, gal_labels, mask, ranks=(1,5,10))
+    def compute_metrics(mask: np.ndarray):
+        return cmc_map_masked(pr_feats, pr_labels, gal_feats, gal_labels, mask, ranks=(1,5,10))
+
+    results = {}
+    rows = []
+    if args.per_view:
+        unique_pr_views = np.unique(pr_views).tolist()
+        for v in unique_pr_views:
+            if args.cross_view:
+                mask = (pr_views[:, None] == v) & (gal_views[None, :] != v)
+            else:
+                mask = (pr_views[:, None] == v) & (gal_views[None, :] == v)
+            m = compute_metrics(mask)
+            results[str(v)] = m
+            rows.append({"view": int(v), **{k: float(val) for k, val in m.items()}})
+        # overall average across probe views
+        avg = {k: float(np.mean([results[str(v)][k] for v in unique_pr_views])) for k in next(iter(results.values())).keys()}
+        results["avg"] = avg
+        rows.append({"view": "avg", **avg})
+        print({"per_view": results})
+        # export CSV if requested
+        if args.export_csv:
+            import csv
+            from pathlib import Path as _P
+            outp = _P(args.export_csv)
+            outp.parent.mkdir(parents=True, exist_ok=True)
+            with open(outp, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=["view", "CMC@1", "CMC@5", "CMC@10", "mAP"])
+                writer.writeheader()
+                for r in rows:
+                    writer.writerow(r)
     else:
-        metrics = cmc_map(pr_feats, pr_labels, gal_feats, gal_labels)
-    print({k: float(v) for k, v in metrics.items()})
+        if args.cross_view:
+            mask = pr_views[:, None] != gal_views[None, :]
+            metrics = compute_metrics(mask)
+        else:
+            mask = pr_views[:, None] == gal_views[None, :]
+            metrics = compute_metrics(mask)
+        print({k: float(v) for k, v in metrics.items()})
 
 
 if __name__ == "__main__":
