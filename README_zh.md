@@ -82,14 +82,21 @@ uv run python examples/train_casia_b.py \
   --views 000,018,036,054,072,090,108,126,144,162,180 \
   --seq-len 30 --epochs 50 --batch-size 32 --device cuda
 ```
-- 评估（gallery/probe 协议，逐视角 CSV）：
+- 评估（gallery/probe 协议，逐视角 CSV/Markdown）：
 ```bash
+# 使用预设协议并同时导出 CSV 与 Markdown 表格
 uv run python examples/eval_casia_b.py \
   --data-root /path/to/CASIA-B --ckpt /path/to/best.pt \
+  --preset casia-b-standard --per-view --cross-view \
+  --export-csv runs/casia_b_eval.csv --export-md runs/casia_b_eval.md
+```
+- 一键流水线（训练 + 跨视角逐视角评估→CSV）：
+```bash
+uv run python examples/run_casia_b_pipeline.py \
+  --data-root /path/to/CASIA-B \
   --views 000,018,036,054,072,090,108,126,144,162,180 \
-  --gallery-conds nm --gallery-cond-ids 01,02,03,04 \
-  --probe-conds nm,bg,cl --probe-cond-ids 05,06,01,02,01,02 \
-  --per-view --cross-view --export-csv runs/casia_b_eval.csv
+  --seq-len 30 --epochs 50 --batch-size 32 --device cuda \
+  --out-dir runs/casia_b_pipeline
 ```
 
 ### OU-MVLP
