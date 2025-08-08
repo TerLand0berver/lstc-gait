@@ -31,6 +31,7 @@ uv run python -c "import torch;print(torch.cuda.is_available(), torch.cuda.devic
 ```
 
 ### 快速上手
+- 提供 Jupyter 笔记本：`notebooks/quick_start.ipynb`（形状健检 + toy 训练/评估）
 - 形状健检：
 ```bash
 uv run python examples/sanity_check.py

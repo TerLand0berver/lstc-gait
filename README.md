@@ -33,6 +33,7 @@ uv run python -c "import torch;print(torch.cuda.is_available(), torch.cuda.devic
 ```
 
 ### Quick start
+- Jupyter notebook: `notebooks/quick_start.ipynb` (shape sanity + toy train/eval)
 - Sanity check:
 ```bash
 uv run python examples/sanity_check.py

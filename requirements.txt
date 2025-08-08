@@ -3,3 +3,5 @@ Pillow>=10
 tensorboard>=2.14
 omegaconf==2.1.2
 antlr4-python3-runtime==4.8
+jupyterlab>=4
+ipykernel>=6
