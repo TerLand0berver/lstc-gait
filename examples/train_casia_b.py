@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader, random_split
 
 from lstc import LSTCBackbone
 from examples.dataset_casia_b import scan_casia_b, build_casia_b_dataset
+from lstc.utils import save_checkpoint
 
 
 def main():
@@ -25,6 +26,7 @@ def main():
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--weight-decay", type=float, default=0.05)
     ap.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    ap.add_argument("--out-dir", type=str, default="runs/casia_b")
     args = ap.parse_args()
 
     views = [v.strip() for v in args.views.split(",") if v.strip()] if args.views else None
@@ -49,6 +51,8 @@ def main():
     optim = torch.optim.AdamW(list(model.parameters()) + list(classifier.parameters()), lr=args.lr, weight_decay=args.weight_decay)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(optim, T_max=args.epochs)
 
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
     best = 0.0
     for epoch in range(1, args.epochs + 1):
         # train
@@ -82,7 +86,19 @@ def main():
         va_loss, va_acc = loss_sum / max(1, total), correct / max(1, total)
         sched.step()
         print(f"Epoch {epoch}: train loss={tr_loss:.4f} acc={tr_acc:.3f} | val loss={va_loss:.4f} acc={va_acc:.3f}")
-        best = max(best, va_acc)
+        # save last
+        state = {
+            "model": model.state_dict(),
+            "classifier": classifier.state_dict(),
+            "epoch": epoch,
+            "val_acc": va_acc,
+            "args": vars(args),
+        }
+        save_checkpoint(state, out_dir / "last.pt")
+        # save best
+        if va_acc >= best:
+            best = va_acc
+            save_checkpoint(state, out_dir / "best.pt")
 
     print(f"Best val acc: {best:.3f}")
 

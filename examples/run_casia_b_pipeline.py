@@ -36,16 +36,9 @@ def main():
         "--epochs", str(args.epochs),
         "--batch-size", str(args.batch_size),
         "--device", args.device,
+        "--out-dir", str(out),
     ]
     run(train_cmd)
-
-    # Find last/best checkpoint under default out_dir of train script? It doesn't save to out-dir.
-    # Expect users to pass a checkpoint; as a fallback, try common path under runs/casia_b.
-    # Here we skip locating and require user to copy best.pt to pipeline out.
-
-    if not ckpt.exists():
-        print(f"[WARN] {ckpt} not found. Please copy your best.pt to {ckpt} before eval.")
-        print("Proceeding to eval may fail without checkpoint.")
 
     # 2) Evaluate per-view (cross-view), export CSV
     eval_cmd = [
