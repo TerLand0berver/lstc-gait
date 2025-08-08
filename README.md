@@ -63,6 +63,15 @@ uv run python examples/train_metric.py --config configs/metric.yaml --device cud
   --use-temporal --use-spatial --use-joint
 ```
 
+### Ablations
+- Toggle branches (temporal/spatial/joint) via CLI flags in CE/metric (see above).
+- One-click sweep over branch combinations:
+```bash
+uv run python examples/run_ablation.py \
+  --data-root /path/to/data --seq-len 30 --epochs 10 --batch-size 32 \
+  --device cuda --out runs/ablation
+```
+
 ### Multi-view (cross-view) usage
 - Train CE over multiple views:
 ```bash

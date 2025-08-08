@@ -61,6 +61,15 @@ uv run python examples/train_metric.py --config configs/metric.yaml --device cud
   --use-temporal --use-spatial --use-joint
 ```
 
+### 消融
+- 通过 CLI 开关控制分支（时间/空间/联合），用于 CE/Metric 的分支消融（见上）。
+- 一键跑批分支组合：
+```bash
+uv run python examples/run_ablation.py \
+  --data-root /path/to/data --seq-len 30 --epochs 10 --batch-size 32 \
+  --device cuda --out runs/ablation
+```
+
 ### 多视角（跨视角）
 - 多视角 CE 训练：
 ```bash
