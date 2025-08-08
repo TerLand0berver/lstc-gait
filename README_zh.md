@@ -69,6 +69,9 @@ uv run python examples/run_ablation.py \
   --data-root /path/to/data --seq-len 30 --epochs 10 --batch-size 32 \
   --device cuda --out runs/ablation
 ```
+- 其他可控项：
+  - `--pooling-topk`：时间选择的 top-k 消融（如 2/3/4）
+  - `--num-stripes`：条带数消融（如 6/8/10）
 
 ### 多视角（跨视角）
 - 多视角 CE 训练：
