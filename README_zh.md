@@ -53,10 +53,12 @@ uv run python examples/train_metric.py --data-root /path/to/data --epochs 50 --b
 
 ### 配置驱动运行
 ```bash
-# CE
-uv run python examples/train_real.py --config configs/real.yaml --device cuda
-# CE+Triplet
-uv run python examples/train_metric.py --config configs/metric.yaml --device cuda
+# CE（可做分支消融）
+uv run python examples/train_real.py --config configs/real.yaml --device cuda \
+  --use-temporal --use-spatial --use-joint  # 关闭任一以做消融
+# CE+Triplet（可做分支消融）
+uv run python examples/train_metric.py --config configs/metric.yaml --device cuda \
+  --use-temporal --use-spatial --use-joint
 ```
 
 ### 多视角（跨视角）

@@ -55,10 +55,12 @@ uv run python examples/train_metric.py --data-root /path/to/data --epochs 50 --b
 
 ### Config-driven runs
 ```bash
-# CE
-uv run python examples/train_real.py --config configs/real.yaml --device cuda
-# CE+Triplet
-uv run python examples/train_metric.py --config configs/metric.yaml --device cuda
+# CE (ablation via branch toggles)
+uv run python examples/train_real.py --config configs/real.yaml --device cuda \
+  --use-temporal --use-spatial --use-joint  # toggle off to ablate
+# CE+Triplet (ablation via branch toggles)
+uv run python examples/train_metric.py --config configs/metric.yaml --device cuda \
+  --use-temporal --use-spatial --use-joint
 ```
 
 ### Multi-view (cross-view) usage
