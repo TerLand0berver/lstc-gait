@@ -247,10 +247,18 @@ if __name__ == "__main__":
         if ema is not None:
             ema.update(model if not isinstance(model, torch.nn.parallel.DistributedDataParallel) else model.module)
         va_loss, va_acc = evaluate(model, classifier, criterion, val_loader, device)
+        va_ema_acc = None
+        if ema is not None and is_main_process():
+            # Evaluate with EMA weights
+            va_loss_ema, va_acc_ema = evaluate(ema.module, classifier, criterion, val_loader, device)
+            va_ema_acc = va_acc_ema
         scheduler.step()
 
         if is_main_process():
-            print(f"Epoch {epoch}: train loss={tr_loss:.4f} acc={tr_acc:.3f} | val loss={va_loss:.4f} acc={va_acc:.3f}")
+            msg = f"Epoch {epoch}: train loss={tr_loss:.4f} acc={tr_acc:.3f} | val loss={va_loss:.4f} acc={va_acc:.3f}"
+            if va_ema_acc is not None:
+                msg += f" | ema acc={va_ema_acc:.3f}"
+            print(msg)
             if tb_writer:
                 tb_writer.add_scalar("train/loss", tr_loss, epoch)
                 tb_writer.add_scalar("train/acc", tr_acc, epoch)
@@ -287,6 +295,19 @@ if __name__ == "__main__":
             else:
                 bad_epochs += 1
 
+            # Save best EMA
+            if va_ema_acc is not None:
+                state_ema = dict(state)
+                state_ema["model"] = ema.module.state_dict()
+                state_ema["val_acc"] = va_ema_acc
+                save_checkpoint(state_ema, out_dir / "last_ema.pt")
+                # Track best
+                if not hasattr(train_one_epoch, "_best_ema"):
+                    train_one_epoch._best_ema = 0.0  # type: ignore[attr-defined]
+                if va_ema_acc >= train_one_epoch._best_ema:  # type: ignore[attr-defined]
+                    train_one_epoch._best_ema = va_ema_acc  # type: ignore[attr-defined]
+                    save_checkpoint(state_ema, out_dir / "best_ema.pt")
+
         stop_flag = torch.tensor(1 if (patience > 0 and bad_epochs >= patience and is_main_process()) else 0, device=device)
         if dist.is_available() and dist.is_initialized():
             dist.broadcast(stop_flag, src=0)
@@ -298,4 +319,7 @@ if __name__ == "__main__":
     if csv_logger:
         csv_logger.close()
     if is_main_process():
-        print(f"Best val acc: {best_acc:.3f}")
+        tail = ""
+        if hasattr(train_one_epoch, "_best_ema"):
+            tail = f", best ema acc: {getattr(train_one_epoch, '_best_ema'):.3f}"
+        print(f"Best val acc: {best_acc:.3f}{tail}")
