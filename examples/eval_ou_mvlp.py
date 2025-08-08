@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 
 from lstc import LSTCBackbone
 from examples.dataset_ou_mvlp import scan_ou_mvlp, build_ou_dataset
+import json
 
 
 def cmc_map(query_feats, query_labels, gallery_feats, gallery_labels, ranks=(1, 5, 10)):
@@ -42,6 +43,7 @@ def main():
     ap.add_argument("--height", type=int, default=64)
     ap.add_argument("--width", type=int, default=44)
     ap.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
     views = [v.strip() for v in args.views.split(",") if v.strip()] if args.views else None
@@ -69,7 +71,11 @@ def main():
     feats = feats / (np.linalg.norm(feats, axis=1, keepdims=True) + 1e-12)
 
     metrics = cmc_map(feats, labels, feats, labels)
-    print({k: float(v) for k, v in metrics.items()})
+    out = {k: float(v) for k, v in metrics.items()}
+    if args.json:
+        print(json.dumps(out))
+    else:
+        print(out)
 
 
 if __name__ == "__main__":
