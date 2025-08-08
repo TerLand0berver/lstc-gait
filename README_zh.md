@@ -92,7 +92,7 @@ uv run python examples/eval_casia_b.py \
   --preset casia-b-standard --per-view --cross-view \
   --export-csv runs/casia_b_eval.csv --export-md runs/casia_b_eval.md
 ```
-- 一键流水线（训练 + 跨视角逐视角评估→CSV）：
+- 一键流水线（训练 + 跨视角逐视角评估→CSV/MD，优先使用 EMA 检查点）：
 ```bash
 uv run python examples/run_casia_b_pipeline.py \
   --data-root /path/to/CASIA-B \

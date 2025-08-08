@@ -94,7 +94,7 @@ uv run python examples/eval_casia_b.py \
   --preset casia-b-standard --per-view --cross-view \
   --export-csv runs/casia_b_eval.csv --export-md runs/casia_b_eval.md
 ```
-- One-click pipeline (train + per-view cross-view eval → CSV):
+- One-click pipeline (train + per-view cross-view eval → CSV/MD, prefers EMA checkpoint):
 ```bash
 uv run python examples/run_casia_b_pipeline.py \
   --data-root /path/to/CASIA-B \
