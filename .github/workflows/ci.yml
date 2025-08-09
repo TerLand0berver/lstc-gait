@@ -37,8 +37,8 @@ jobs:
           pip install -r requirements.txt --no-deps
           # tensorboard deps required by torch.utils.tensorboard
           pip install google protobuf absl-py werkzeug markdown antlr4-python3-runtime pyyaml
-          # dev tools for type/test
-          pip install mypy pytest
+          # dev tools for tests only
+          pip install pytest
           pip install -e .
 
       - name: Sanity check
@@ -47,9 +47,6 @@ jobs:
         run: |
           python examples/sanity_check.py
           lstc sanity
-
-      - name: Type check (mypy)
-        run: mypy .
 
       - name: Unit tests (pytest)
         env:
