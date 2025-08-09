@@ -4,6 +4,7 @@ from typing import Tuple, Optional
 import torch
 from torch import nn
 import torch.nn.functional as F
+import math
 
 
 class LocalSpatioTemporalConv(nn.Module):
@@ -110,6 +111,67 @@ class LocalSpatioTemporalConv(nn.Module):
         return y
 
 
+class DynamicConv3d(nn.Module):
+    """
+    Lightweight dynamic 3D conv with expert kernels and input-adaptive gating.
+    - experts: number of expert kernels per output channel chunk
+    - gate MLP pools global context and predicts soft weights over experts
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: tuple[int, int, int] = (3, 3, 3),
+        stride: tuple[int, int, int] = (1, 1, 1),
+        padding: tuple[int, int, int] = (1, 1, 1),
+        experts: int = 4,
+        gate_hidden: int | None = None,
+        bias: bool = False,
+    ) -> None:
+        super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.experts = experts
+        kT, kH, kW = kernel_size
+        # Expert kernels: (E, out, in, kT, kH, kW)
+        self.weight = nn.Parameter(torch.randn(experts, out_channels, in_channels, kT, kH, kW) * 0.01)
+        self.bias = nn.Parameter(torch.zeros(experts, out_channels)) if bias else None
+        # Gate: global avg-pool -> MLP -> softmax over E
+        gate_hidden = gate_hidden or max(16, in_channels // 2)
+        self.gap = nn.AdaptiveAvgPool3d(1)
+        self.gate = nn.Sequential(
+            nn.Conv3d(in_channels, gate_hidden, kernel_size=1, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Conv3d(gate_hidden, experts, kernel_size=1, bias=True),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        n, c, t, h, w = x.shape
+        context = self.gap(x)  # (N,C,1,1,1)
+        logits = self.gate(context).flatten(1)  # (N,E)
+        gate = torch.softmax(logits, dim=1)  # (N,E)
+        # Aggregate expert kernels per sample
+        # Weight shape: (E, out, in, kT, kH, kW)
+        k = self.weight.view(self.experts, self.out_channels, -1)  # (E, out, in*kT*kH*kW)
+        k = torch.einsum('ne,eoi->noi', gate, k)  # (N, out, in*k*)
+        k = k.view(n * self.out_channels, self.in_channels, *self.kernel_size)
+        if self.bias is not None:
+            b = torch.einsum('ne,eo->no', gate, self.bias)  # (N,out)
+            b = b.view(n * self.out_channels)
+        else:
+            b = None
+        # Grouped conv by samples: reshape input to (1, N*C, T,H,W) and use groups=N
+        x_ = x.view(1, n * c, t, h, w)
+        y = F.conv3d(x_, k, bias=b, stride=self.stride, padding=self.padding, groups=n)
+        # Reshape back to (N, out, ...)
+        y = y.view(n, self.out_channels, y.shape[-3], y.shape[-2], y.shape[-1])
+        return y
+
+
 class AsymmetricSpatioTemporalBlock(nn.Module):
     """
     Three-branch asymmetric conv block:
@@ -131,6 +193,9 @@ class AsymmetricSpatioTemporalBlock(nn.Module):
         use_temporal: bool = True,
         use_spatial: bool = True,
         use_joint: bool = True,
+        joint_type: str = "lstc",  # "lstc" | "dynamic"
+        dynamic_experts: int = 4,
+        dynamic_gate_hidden: int | None = None,
     ) -> None:
         super().__init__()
         enabled = [use_temporal, use_spatial, use_joint]
@@ -158,15 +223,28 @@ class AsymmetricSpatioTemporalBlock(nn.Module):
         else:
             self.branch_spatial = None
         if use_joint:
-            self.branch_joint = LocalSpatioTemporalConv(
-                in_channels=in_channels,
-                out_channels=mid_per,
-                kernel_t=kT,
-                kernel_h=kH,
-                kernel_w=kW,
-                num_stripes=num_stripes,
-                bias=bias,
-            )
+            if joint_type == "lstc":
+                self.branch_joint = LocalSpatioTemporalConv(
+                    in_channels=in_channels,
+                    out_channels=mid_per,
+                    kernel_t=kT,
+                    kernel_h=kH,
+                    kernel_w=kW,
+                    num_stripes=num_stripes,
+                    bias=bias,
+                )
+            elif joint_type == "dynamic":
+                self.branch_joint = DynamicConv3d(
+                    in_channels,
+                    mid_per,
+                    kernel_size=(kT, kH, kW),
+                    padding=(kT // 2, kH // 2, kW // 2),
+                    experts=dynamic_experts,
+                    gate_hidden=dynamic_gate_hidden,
+                    bias=bias,
+                )
+            else:
+                raise ValueError(f"Unknown joint_type: {joint_type}")
         else:
             self.branch_joint = None
         fuse_in = mid_per * num_enabled
