@@ -11,23 +11,23 @@
 
 ```mermaid
 flowchart LR
-    X[输入 N×C×T×H×W]
+    X["输入 NxCxTxHxW"]
     ST[Stem 3D]
     B1[非对称块 1]
     D1[下采样]
     B2[非对称块 2]
     D2[下采样]
     B3[非对称块 3]
-    H[Head 1×1×1]
-    P[LSTP (硬/软 top-k)]
+    H["Head 1x1x1"]
+    P["LSTP (硬/软 top-k)"]
     E[Embedding]
 
     X --> ST --> B1 --> D1 --> B2 --> D2 --> B3 --> H --> P --> E
 
     subgraph 非对称块
-      T[(时间 kT×1×1)]
-      S[(空间 1×kH×kW)]
-      J[(联合 LSTC | 动态3D)]
+      T[(时间 kTx1x1)]
+      S[(空间 1xkHxkW)]
+      J[(联合 LSTC 或 动态3D)]
       T -->|concat| F
       S -->|concat| F
       J -->|concat| F

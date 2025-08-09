@@ -13,23 +13,23 @@ For Chinese documentation, see: [README_zh.md](README_zh.md)
 
 ```mermaid
 flowchart LR
-    X[Input N×C×T×H×W]
+    X["Input NxCxTxHxW"]
     ST[Stem 3D]
     B1[Asymmetric Block 1]
     D1[Downsample]
     B2[Asymmetric Block 2]
     D2[Downsample]
     B3[Asymmetric Block 3]
-    H[Head 1×1×1]
-    P[LSTP (hard/soft top-k)]
+    H["Head 1x1x1"]
+    P["LSTP (hard/soft top-k)"]
     E[Embedding]
 
     X --> ST --> B1 --> D1 --> B2 --> D2 --> B3 --> H --> P --> E
 
     subgraph Asymmetric Block
-      T[(Temporal kT×1×1)]
-      S[(Spatial 1×kH×kW)]
-      J[(Joint LSTC | Dynamic3D)]
+      T[(Temporal kTx1x1)]
+      S[(Spatial 1xkHxkW)]
+      J[(Joint LSTC or Dynamic3D)]
       T -->|concat| F
       S -->|concat| F
       J -->|concat| F
