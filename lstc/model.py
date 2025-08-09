@@ -29,6 +29,9 @@ class LSTCBackbone(nn.Module):
         use_temporal: bool = True,
         use_spatial: bool = True,
         use_joint: bool = True,
+        joint_type: str = "lstc",
+        dynamic_experts: int = 4,
+        dynamic_gate_hidden: int | None = None,
     ) -> None:
         super().__init__()
         c1 = base_channels
@@ -45,6 +48,9 @@ class LSTCBackbone(nn.Module):
             use_temporal=use_temporal,
             use_spatial=use_spatial,
             use_joint=use_joint,
+            joint_type=joint_type,
+            dynamic_experts=dynamic_experts,
+            dynamic_gate_hidden=dynamic_gate_hidden,
         )
 
         self.stem = nn.Sequential(
@@ -55,21 +61,27 @@ class LSTCBackbone(nn.Module):
         self.block1 = AsymmetricSpatioTemporalBlock(
             c1, c1, kT=3, kH=7, kW=3, num_stripes=num_stripes,
             use_temporal=use_temporal, use_spatial=use_spatial, use_joint=use_joint,
-            joint_type="lstc",
+            joint_type=joint_type,
+            dynamic_experts=dynamic_experts,
+            dynamic_gate_hidden=dynamic_gate_hidden,
         )
         self.down1 = nn.MaxPool3d(kernel_size=(1, 2, 2))
 
         self.block2 = AsymmetricSpatioTemporalBlock(
             c1, c2, kT=3, kH=5, kW=3, num_stripes=num_stripes,
             use_temporal=use_temporal, use_spatial=use_spatial, use_joint=use_joint,
-            joint_type="lstc",
+            joint_type=joint_type,
+            dynamic_experts=dynamic_experts,
+            dynamic_gate_hidden=dynamic_gate_hidden,
         )
         self.down2 = nn.MaxPool3d(kernel_size=(1, 2, 2))
 
         self.block3 = AsymmetricSpatioTemporalBlock(
             c2, c3, kT=3, kH=3, kW=3, num_stripes=num_stripes,
             use_temporal=use_temporal, use_spatial=use_spatial, use_joint=use_joint,
-            joint_type="lstc",
+            joint_type=joint_type,
+            dynamic_experts=dynamic_experts,
+            dynamic_gate_hidden=dynamic_gate_hidden,
         )
 
         self.head = nn.Sequential(

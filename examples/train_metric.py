@@ -87,6 +87,9 @@ if __name__ == "__main__":
     parser.add_argument("--use-temporal", action="store_true", default=True)
     parser.add_argument("--use-spatial", action="store_true", default=True)
     parser.add_argument("--use-joint", action="store_true", default=True)
+    parser.add_argument("--joint-type", type=str, default="lstc", choices=["lstc","dynamic"])
+    parser.add_argument("--dynamic-experts", type=int, default=4)
+    parser.add_argument("--dynamic-gate-hidden", type=int, default=0)
     parser.add_argument("--batch-p", type=int, default=8)
     parser.add_argument("--batch-k", type=int, default=4)
     parser.add_argument("--lr", type=float, default=3e-4)
@@ -149,6 +152,9 @@ if __name__ == "__main__":
         use_temporal=args.use_temporal,
         use_spatial=args.use_spatial,
         use_joint=args.use_joint,
+        joint_type=args.joint_type,
+        dynamic_experts=args.dynamic_experts,
+        dynamic_gate_hidden=(args.dynamic_gate_hidden or None),
     ).to(device)
     classifier = nn.Linear(args.embedding_dim, num_classes).to(device)
 
