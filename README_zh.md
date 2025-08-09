@@ -1,9 +1,38 @@
 ## LSTC/LSTP 步态识别原型
 
-在高度条带先验下学习判别性的步态时空特征：
-- LSTC：在高度条带内进行 3D 深度卷积 + 1x1x1 通道混合，避免跨条带泄漏。
-- 非对称块：时间分支(kT,1,1) / 空间分支(1,kH,kW) / 联合分支(LSTC) 并联融合。
-- LSTP：条带内按帧 L2 得分做 top-k 选择并平均，再拼接得到序列表示。
+一套轻量、易复现的步态时空建模方案：以高度条带为先验，在条带内使用 3D 深度可分卷积，并提供非对称分支、硬/软时间选择，以及可选的动态 3D 联合分支。
+
+- LSTC：条带内 3D 深度卷积 + 1×1×1 通道混合，抑制跨条带泄漏。
+- 非对称块：时间/空间/联合分支并联，1×1×1 融合。
+- LSTP：条带内时间 top-k 选择（硬）或温度加权（软）。
+- 动态联合分支：以专家核 + 全局门控的 3D 卷积替代 LSTC，增强条带内自适应表达。
+
+### 架构速览
+
+```mermaid
+flowchart LR
+    X[输入 N×C×T×H×W]
+    ST[Stem 3D]
+    B1[非对称块 1]
+    D1[下采样]
+    B2[非对称块 2]
+    D2[下采样]
+    B3[非对称块 3]
+    H[Head 1×1×1]
+    P[LSTP (硬/软 top-k)]
+    E[Embedding]
+
+    X --> ST --> B1 --> D1 --> B2 --> D2 --> B3 --> H --> P --> E
+
+    subgraph 非对称块
+      T[(时间 kT×1×1)]
+      S[(空间 1×kH×kW)]
+      J[(联合 LSTC | 动态3D)]
+      T -->|concat| F
+      S -->|concat| F
+      J -->|concat| F
+    end
+```
 
 ### 目录结构
 - `lstc/modules.py`：LSTC、非对称块、LSTP
@@ -31,7 +60,7 @@ uv run python -c "import torch;print(torch.cuda.is_available(), torch.cuda.devic
 ```
 
 ### 快速上手
-- 提供 Jupyter 笔记本：`notebooks/quick_start.ipynb`（形状健检 + toy 训练/评估）
+- 提供 Jupyter 笔记本：`notebooks/quick_start_safe.ipynb`（形状健检 + toy 训练/评估）
 - 形状健检：
 ```bash
 uv run python examples/sanity_check.py
@@ -62,7 +91,7 @@ uv run python examples/train_metric.py --config configs/metric.yaml --device cud
   --use-temporal --use-spatial --use-joint
 ```
 
-### 消融
+### 控制项与消融
 - 通过 CLI 开关控制分支（时间/空间/联合），用于 CE/Metric 的分支消融（见上）。
 - 一键跑批分支组合：
 ```bash
@@ -96,7 +125,7 @@ uv run python examples/eval_retrieval_multiview.py --config configs/multiview_re
   --ckpt runs/lstc_real_mv/best.pt
 ```
 
-### CASIA-B
+### CASIA-B（标准协议）
 - 最小 CE 训练：
 ```bash
 uv run python examples/train_casia_b.py \

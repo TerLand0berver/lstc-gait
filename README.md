@@ -1,11 +1,40 @@
 ## LSTC/LSTP for Gait Recognition
 
-Learn discriminative gait features with local stripe priors.
-- Local Spatio-Temporal Convolution (LSTC): depthwise 3D inside height stripes + 1x1x1 pointwise mix (no cross-stripe leakage).
-- Asymmetric block: temporal-only (kT,1,1), spatial-only (1,kH,kW), joint (LSTC), then fuse.
-- Local Spatio-Temporal Pooling (LSTP): stripe-wise top-k over time → average → concat.
+LSTC/LSTP is a lean, reproduction-friendly spatio-temporal pipeline for gait. It uses a height-stripe prior with efficient 3D depthwise convs and offers asymmetric branches, hard/soft temporal selection, and an optional dynamic 3D joint branch.
+
+- Local Spatio-Temporal Convolution (LSTC): depthwise 3D within height stripes + 1×1×1 mix; prevents cross-stripe leakage.
+- Asymmetric block: temporal-only, spatial-only, and joint branches; fuse with 1×1×1.
+- Local Spatio-Temporal Pooling (LSTP): stripe-wise top-k over time (hard) or temperature-weighted soft selection.
+- Dynamic joint option: an expert-gated 3D convolution as an alternative to LSTC in the joint branch.
 
 For Chinese documentation, see: [README_zh.md](README_zh.md)
+
+### Architecture at a glance
+
+```mermaid
+flowchart LR
+    X[Input N×C×T×H×W]
+    ST[Stem 3D]
+    B1[Asymmetric Block 1]
+    D1[Downsample]
+    B2[Asymmetric Block 2]
+    D2[Downsample]
+    B3[Asymmetric Block 3]
+    H[Head 1×1×1]
+    P[LSTP (hard/soft top-k)]
+    E[Embedding]
+
+    X --> ST --> B1 --> D1 --> B2 --> D2 --> B3 --> H --> P --> E
+
+    subgraph Asymmetric Block
+      T[(Temporal kT×1×1)]
+      S[(Spatial 1×kH×kW)]
+      J[(Joint LSTC | Dynamic3D)]
+      T -->|concat| F
+      S -->|concat| F
+      J -->|concat| F
+    end
+```
 
 ### What's inside
 - `lstc/modules.py`: LSTC, asymmetric block, LSTP
@@ -33,7 +62,7 @@ uv run python -c "import torch;print(torch.cuda.is_available(), torch.cuda.devic
 ```
 
 ### Quick start
-- Jupyter notebook: `notebooks/quick_start.ipynb` (shape sanity + toy train/eval)
+- Jupyter notebook: `notebooks/quick_start_safe.ipynb` (shape sanity + toy train/eval)
 - Sanity check:
 ```bash
 uv run python examples/sanity_check.py
@@ -42,7 +71,7 @@ uv run python examples/sanity_check.py
 ```bash
 uv run python examples/train_toy.py --epochs 2 --device cuda
 ```
-- Real data (CE) + training enhancements:
+- Real data (CE) + training enhancements (EMA, GradClip, AMP):
 ```bash
 uv run python examples/train_real.py --data-root /path/to/data --epochs 50 --batch-size 32 --seq-len 30 --device cuda --amp \
   --ema --ema-decay 0.999 --grad-clip 1.0  # saves best_ema.pt/last_ema.pt and logs ema acc \
@@ -64,7 +93,12 @@ uv run python examples/train_metric.py --config configs/metric.yaml --device cud
   --use-temporal --use-spatial --use-joint
 ```
 
-### Ablations
+### Controls & Ablations
+- Branch toggles: `--use-temporal/--use-spatial/--use-joint`
+- Joint branch: `--joint-type lstc|dynamic` (with `--dynamic-experts/--dynamic-gate-hidden`)
+- Pooling: `--pooling-topk`, or `--pooling-soft --pooling-temperature`
+- Stripes: `--num-stripes`
+
 - Toggle branches (temporal/spatial/joint) via CLI flags in CE/metric (see above).
 - One-click sweep over branch combinations:
 ```bash
@@ -98,7 +132,7 @@ uv run python examples/eval_retrieval_multiview.py --config configs/multiview_re
   --ckpt runs/lstc_real_mv/best.pt
 ```
 
-### CASIA-B
+### CASIA-B (standard protocol)
 - Minimal CE training:
 ```bash
 uv run python examples/train_casia_b.py \
