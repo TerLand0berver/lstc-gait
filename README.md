@@ -78,6 +78,16 @@ uv run python -c "import torch;print(torch.cuda.is_available(), torch.cuda.devic
 ```bash
 uv run python examples/sanity_check.py
 ```
+
+- CLI (optional, after editable install):
+```bash
+uv pip install -e .
+lstc sanity
+# Train CE (real data)
+lstc train-real -- --data-root /path/to/data --epochs 1 --batch-size 8 --seq-len 12 --device cpu
+# Export TorchScript
+lstc export --ckpt runs/lstc_real/best.pt --torchscript-out runs/export/model.ts
+```
 - Toy training:
 ```bash
 uv run python examples/train_toy.py --epochs 2 --device cuda

@@ -39,12 +39,14 @@ jobs:
           pip install google protobuf absl-py werkzeug markdown antlr4-python3-runtime pyyaml
           # dev tools for lint/type/test
           pip install ruff mypy pytest
+          pip install -e .
 
       - name: Sanity check
         env:
           PYTHONPATH: .
         run: |
           python examples/sanity_check.py
+          lstc sanity
 
       - name: Lint (ruff)
         run: ruff check .
