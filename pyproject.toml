@@ -28,6 +28,15 @@ lstc = "lstc.cli:main"
 
 [tool.ruff]
 line-length = 100
+target-version = "py311"
+exclude = [
+  "examples",
+  "docs",
+  "notebooks",
+  "configs",
+]
+
+[tool.ruff.lint]
 select = ["E", "F", "I"]
 ignore = []
 
