@@ -200,12 +200,14 @@ class LocalSpatioTemporalPooling(nn.Module):
     Output: (N, C * num_stripes)
     """
 
-    def __init__(self, num_stripes: int = 8, topk: int = 2, eps: float = 1e-6) -> None:
+    def __init__(self, num_stripes: int = 8, topk: int = 2, eps: float = 1e-6, soft: bool = False, temperature: float = 1.0) -> None:
         super().__init__()
         assert num_stripes >= 1 and topk >= 1
         self.num_stripes = num_stripes
         self.topk = topk
         self.eps = eps
+        self.soft = soft
+        self.temperature = temperature
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         n, c, t, h, w = x.shape
@@ -218,14 +220,18 @@ class LocalSpatioTemporalPooling(nn.Module):
             x_local = x[:, :, :, h_start:h_end, :]
             # Spatial average per frame in this stripe -> (N, C, T)
             frame_feats = x_local.mean(dim=[3, 4])
-            # Top-k selection over T by magnitude (L2 over channels)
+            # Score frames by L2 magnitude over channels
             scores = torch.sqrt(torch.clamp((frame_feats ** 2).sum(dim=1), min=self.eps))  # (N, T)
-            k = min(self.topk, t)
-            topk_vals, topk_idx = torch.topk(scores, k=k, dim=1, largest=True, sorted=False)
-            # Gather top-k frames and average them
-            gather_idx = topk_idx.unsqueeze(1).expand(-1, c, -1)  # (N, C, k)
-            topk_frames = torch.gather(frame_feats, dim=2, index=gather_idx)
-            stripe_vec = topk_frames.mean(dim=2)  # (N, C)
+            if self.soft:
+                # Soft top-k: temperature-scaled softmax weights across time
+                weights = torch.softmax(scores / max(self.eps, self.temperature), dim=1)  # (N, T)
+                stripe_vec = torch.bmm(frame_feats, weights.unsqueeze(2)).squeeze(2)  # (N, C)
+            else:
+                k = min(self.topk, t)
+                topk_vals, topk_idx = torch.topk(scores, k=k, dim=1, largest=True, sorted=False)
+                gather_idx = topk_idx.unsqueeze(1).expand(-1, c, -1)  # (N, C, k)
+                topk_frames = torch.gather(frame_feats, dim=2, index=gather_idx)
+                stripe_vec = topk_frames.mean(dim=2)  # (N, C)
             stripe_features.append(stripe_vec)
 
         out = torch.cat(stripe_features, dim=1)  # (N, C * num_stripes)

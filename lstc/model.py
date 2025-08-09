@@ -24,6 +24,8 @@ class LSTCBackbone(nn.Module):
         num_stripes: int = 8,
         embedding_dim: int = 256,
         pooling_topk: int = 2,
+        pooling_soft: bool = False,
+        pooling_temperature: float = 1.0,
         use_temporal: bool = True,
         use_spatial: bool = True,
         use_joint: bool = True,
@@ -73,7 +75,7 @@ class LSTCBackbone(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-        self.pool = LocalSpatioTemporalPooling(num_stripes=num_stripes, topk=pooling_topk)
+        self.pool = LocalSpatioTemporalPooling(num_stripes=num_stripes, topk=pooling_topk, soft=pooling_soft, temperature=pooling_temperature)
         self.fc = nn.Linear(c3 * num_stripes, embedding_dim)
         self.bn = nn.BatchNorm1d(embedding_dim)
 
