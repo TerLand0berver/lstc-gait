@@ -76,6 +76,16 @@ uv run python -c "import torch;print(torch.cuda.is_available(), torch.cuda.devic
 ```bash
 uv run python examples/sanity_check.py
 ```
+
+- 可选 CLI（可编辑安装后使用）：
+```bash
+uv pip install -e .
+lstc sanity
+# 真实数据（CE）
+lstc train-real -- --data-root /path/to/data --epochs 1 --batch-size 8 --seq-len 12 --device cpu
+# 导出 TorchScript
+lstc export --ckpt runs/lstc_real/best.pt --torchscript-out runs/export/model.ts
+```
 - 玩具训练：
 ```bash
 uv run python examples/train_toy.py --epochs 2 --device cuda
@@ -222,6 +232,9 @@ uv run python examples/gen_toy_dataset.py --out ./toy_data --subjects 4 --seq-pe
 - 度量学习：PK 采样（如 P=8, K=4；DDP 下需整除）
 
 ### 常见问题 / FAQ
+- **CPU 下的 pinned memory 警告**：现已仅在 CUDA 可用时启用 `pin_memory`。
+- **Notebook 执行告警**：CI 会在执行前规范化 Notebook 的 cell ID，并以无头方式运行 `notebooks/quick_start_safe.ipynb`。
+- **数值健检**：PyTest 含玩具数据训练的数值断言，保证 1 个 epoch 后精度高于随机基线。
 - 检测不到 CUDA（cuda? False）：
   - 误装了 CPU 版 PyTorch。请从 CUDA 轮子源（cu121/cu124）重装，并确认运行所用的 venv 与安装一致。
   - 显卡驱动过旧。更新主机/WSL 的 NVIDIA 驱动。环境内无需安装 CUDA Toolkit。
