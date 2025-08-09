@@ -102,6 +102,6 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          pip install -q nbconvert nbformat jupyter
+          pip install -q nbconvert nbformat jupyter grpcio tensorboard-data-server
           jupyter nbconvert --to notebook --execute notebooks/quick_start_safe.ipynb \
             --output /tmp/quick_start_safe.out.ipynb --ExecutePreprocessor.timeout=600
