@@ -238,6 +238,9 @@ uv run python examples/gen_toy_dataset.py --out ./toy_data --subjects 4 --seq-pe
 - Metric: PK sampling e.g., P=8, K=4 (ensure divisibility in DDP)
 
 ### Troubleshooting / FAQ
+- **Pinned memory warning on CPU**: We now enable `pin_memory` only when CUDA is available.
+- **Notebook execution warnings**: CI normalizes cell IDs and executes `notebooks/quick_start_safe.ipynb` headlessly.
+- **Numeric sanity in tests**: PyTest includes a toy training test asserting accuracy exceeds a random baseline after 1 epoch.
 - CUDA not detected (cuda? False):
   - Installed CPU wheel by accident. Reinstall from PyTorch CUDA index (cu121/cu124) and ensure the venv you run is the same one you installed into.
   - Driver too old. Update NVIDIA driver on host/WSL. No need to install CUDA Toolkit inside the env.
