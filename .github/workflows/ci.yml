@@ -41,10 +41,36 @@ jobs:
           pip install -e .
       - name: Import check
         run: |
-          python - <<'PY'
-import importlib
-import sys
-print('Python', sys.version)
-importlib.import_module('lstc')
-print('lstc imported OK')
-PY
+          python -c "import sys; print('Python', sys.version)"
+          python -c "import importlib; importlib.import_module('lstc'); print('lstc imported OK')"
+
+      - name: Sanity check (shapes)
+        env:
+          PYTHONPATH: .
+        run: |
+          python examples/sanity_check.py
+
+      - name: Generate toy dataset
+        env:
+          PYTHONPATH: .
+        run: |
+          python examples/gen_toy_dataset.py --out ./toy_data --subjects 3 --seq-per-subject 2 --frames 8
+
+      - name: Train CE (toy, 1 epoch, CPU)
+        env:
+          PYTHONPATH: .
+        run: |
+          python examples/train_real.py --data-root ./toy_data --epochs 1 --batch-size 8 --seq-len 8 --device cpu
+
+      - name: Export TorchScript and check equivalence
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          lstc export --ckpt runs/lstc_real/best.pt --seq-len 8 --height 64 --width 44 --torchscript-out runs/export/model.ts
+          python scripts/ci_check_ts.py
+
+      - name: Upload export artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: export-model
+          path: runs/export/model.ts
