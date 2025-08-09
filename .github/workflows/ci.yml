@@ -37,12 +37,25 @@ jobs:
           pip install -r requirements.txt --no-deps
           # tensorboard deps required by torch.utils.tensorboard
           pip install google protobuf absl-py werkzeug markdown antlr4-python3-runtime pyyaml
+          # dev tools for lint/type/test
+          pip install ruff mypy pytest
 
       - name: Sanity check
         env:
           PYTHONPATH: .
         run: |
           python examples/sanity_check.py
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Type check (mypy)
+        run: mypy .
+
+      - name: Unit tests (pytest)
+        env:
+          PYTHONPATH: .
+        run: pytest -q
 
       - name: Generate toy datasets (single & multiview)
         env:
@@ -103,5 +116,19 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           pip install -q nbconvert nbformat jupyter grpcio tensorboard-data-server
+          python - <<'PY'
+import nbformat as nbf
+from pathlib import Path
+nb = nbf.read(Path('notebooks/quick_start_safe.ipynb'), as_version=nbf.NO_CONVERT)
+nbf.validate(nb)  # triggers warnings; normalization step below adds missing ids
+changed = False
+for cell in nb.cells:
+    if 'id' not in cell:
+        cell['id'] = nbf.v4.new_id()  # type: ignore[attr-defined]
+        changed = True
+if changed:
+    nbf.write(nb, Path('notebooks/quick_start_safe.ipynb'))
+print('Notebook IDs normalized')
+PY
           jupyter nbconvert --to notebook --execute notebooks/quick_start_safe.ipynb \
             --output /tmp/quick_start_safe.out.ipynb --ExecutePreprocessor.timeout=600
