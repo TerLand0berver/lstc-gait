@@ -21,7 +21,7 @@ def build_dataloader_pk(data_root: Path, seq_len: int, height: int, width: int, 
     dataset = GaitSilhouetteDataset(records, seq_len=seq_len, height=height, width=width, sampling="uniform")
     labels = [r.label_id for r in records]
     sampler = PKSampler(labels=labels, batch_p=batch_p, batch_k=batch_k)
-    loader = DataLoader(dataset, batch_sampler=sampler, num_workers=num_workers, pin_memory=True)
+    loader = DataLoader(dataset, batch_sampler=sampler, num_workers=num_workers, pin_memory=torch.cuda.is_available())
     num_classes = len(label_map)
     return loader, num_classes
 

@@ -40,8 +40,8 @@ def main():
     n_train = int(0.9 * len(ds)); n_val = max(1, len(ds) - n_train)
     train_set, val_set = random_split(ds, [n_train, n_val])
 
-    train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=True)
-    val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=True)
+    train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=torch.cuda.is_available())
+    val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=torch.cuda.is_available())
 
     device = torch.device(args.device)
     model = LSTCBackbone(in_channels=1, base_channels=args.base_channels, num_stripes=args.num_stripes, embedding_dim=args.embedding_dim).to(device)

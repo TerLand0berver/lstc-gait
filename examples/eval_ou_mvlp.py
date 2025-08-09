@@ -49,7 +49,7 @@ def main():
     views = [v.strip() for v in args.views.split(",") if v.strip()] if args.views else None
     records = scan_ou_mvlp(Path(args.data_root), include_views=views, min_frames=2)
     dataset = build_ou_dataset(records, seq_len=args.seq_len, height=args.height, width=args.width)
-    loader = DataLoader(dataset, batch_size=64, shuffle=False, num_workers=4, pin_memory=True)
+    loader = DataLoader(dataset, batch_size=64, shuffle=False, num_workers=4, pin_memory=torch.cuda.is_available())
 
     ckpt = torch.load(Path(args.ckpt), map_location="cpu")
     embed_dim = ckpt.get("args", {}).get("embedding_dim", 256)

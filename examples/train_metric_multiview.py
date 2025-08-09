@@ -84,8 +84,8 @@ if __name__ == "__main__":
         train_labels.append(int(y)); train_views.append(int(v))
     sampler = MultiViewPKSampler(labels=train_labels, view_ids=train_views, batch_p=args.batch_p, batch_k=args.batch_k, views_per_id=args.views_per_id, balance_across_views=getattr(args, 'balance_across_views', True))
     # In DDP case, sampler will shard batches internally; here we consume lists of indices per batch
-    train_loader = DataLoader(train_set, batch_sampler=sampler, num_workers=args.num_workers, pin_memory=True)
-    val_loader = DataLoader(val_set, batch_size=args.batch_k * args.batch_p, shuffle=False, num_workers=args.num_workers, pin_memory=True)
+    train_loader = DataLoader(train_set, batch_sampler=sampler, num_workers=args.num_workers, pin_memory=torch.cuda.is_available())
+    val_loader = DataLoader(val_set, batch_size=args.batch_k * args.batch_p, shuffle=False, num_workers=args.num_workers, pin_memory=torch.cuda.is_available())
 
     model = LSTCBackbone(in_channels=1, base_channels=args.base_channels, num_stripes=args.num_stripes, embedding_dim=args.embedding_dim).to(device)
     num_classes = len(dataset.global_label_map)

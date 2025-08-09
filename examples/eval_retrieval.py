@@ -84,7 +84,7 @@ if __name__ == "__main__":
     device = torch.device(args.device)
     records, label_map = scan_silhouette_root(Path(args.data_root), min_frames=2)
     dataset = GaitSilhouetteDataset(records, seq_len=args.seq_len, height=args.height, width=args.width, sampling="uniform", return_index=True)
-    loader = DataLoader(dataset, batch_size=64, shuffle=False, num_workers=2, pin_memory=True)
+    loader = DataLoader(dataset, batch_size=64, shuffle=False, num_workers=2, pin_memory=torch.cuda.is_available())
 
     ckpt = torch.load(args.ckpt, map_location="cpu")
     embed_dim = ckpt.get("args", {}).get("embedding_dim", 256)

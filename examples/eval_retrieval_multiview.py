@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dataset = MultiViewGaitDataset([Path(p) for p in args.data_roots], seq_len=args.seq_len, height=args.height, width=args.width)
-    loader = DataLoader(dataset, batch_size=64, shuffle=False, num_workers=args.num_workers, pin_memory=True)
+    loader = DataLoader(dataset, batch_size=64, shuffle=False, num_workers=args.num_workers, pin_memory=torch.cuda.is_available())
 
     ckpt = torch.load(Path(args.ckpt), map_location="cpu")
     embed_dim = ckpt.get("args", {}).get("embedding_dim", args.embedding_dim)

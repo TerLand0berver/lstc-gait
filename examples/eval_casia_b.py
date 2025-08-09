@@ -117,8 +117,8 @@ def main():
 
     gal_ds = build_casia_b_dataset(gal_records, seq_len=args.seq_len, height=args.height, width=args.width)
     pr_ds = build_casia_b_dataset(pr_records, seq_len=args.seq_len, height=args.height, width=args.width)
-    gal_loader = DataLoader(gal_ds, batch_size=64, shuffle=False, num_workers=4, pin_memory=True)
-    pr_loader = DataLoader(pr_ds, batch_size=64, shuffle=False, num_workers=4, pin_memory=True)
+    gal_loader = DataLoader(gal_ds, batch_size=64, shuffle=False, num_workers=4, pin_memory=torch.cuda.is_available())
+    pr_loader = DataLoader(pr_ds, batch_size=64, shuffle=False, num_workers=4, pin_memory=torch.cuda.is_available())
 
     ckpt = torch.load(Path(args.ckpt), map_location="cpu")
     embed_dim = ckpt.get("args", {}).get("embedding_dim", 256)
