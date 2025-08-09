@@ -61,7 +61,15 @@ def cmd_export(args: argparse.Namespace) -> int:
     # TorchScript export (trace on dummy input)
     t, h, w = args.seq_len, args.height, args.width
     dummy = torch.randn(1, 1, t, h, w)
-    scripted = torch.jit.trace(lambda x: model(x)["embedding"], dummy)
+    class _EmbeddingOnlyTS(nn.Module):
+        def __init__(self, m: nn.Module) -> None:
+            super().__init__()
+            self.m = m
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:  # type: ignore[override]
+            return self.m(x)["embedding"]
+
+    scripted = torch.jit.trace(_EmbeddingOnlyTS(model), dummy)
     ts_out = Path(args.torchscript_out)
     ts_out.parent.mkdir(parents=True, exist_ok=True)
     scripted.save(str(ts_out))
