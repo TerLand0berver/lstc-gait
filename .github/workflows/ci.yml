@@ -97,3 +97,11 @@ jobs:
           PYTHONPATH: .
         run: |
           python examples/eval_retrieval_multiview.py --config /tmp/mv.yaml --ckpt runs/lstc_real_mv/best.pt
+
+      - name: Execute quick_start_safe notebook (smoke)
+        env:
+          PYTHONPATH: .
+        run: |
+          pip install -q nbconvert nbformat jupyter
+          jupyter nbconvert --to notebook --execute notebooks/quick_start_safe.ipynb \
+            --output /tmp/quick_start_safe.out.ipynb --ExecutePreprocessor.timeout=600

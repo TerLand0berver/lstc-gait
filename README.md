@@ -62,7 +62,18 @@ uv run python -c "import torch;print(torch.cuda.is_available(), torch.cuda.devic
 ```
 
 ### Quick start
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/TerLand0berver/lstc-gait/blob/main/notebooks/quick_start_safe.ipynb)
 - Jupyter notebook: `notebooks/quick_start_safe.ipynb` (shape sanity + toy train/eval)
+- Colab setup snippet (first cell if running in Colab):
+  ```python
+  # If running on Colab, install deps (CPU-only is fine)
+  import os
+  IN_COLAB = 'COLAB_RELEASE_TAG' in os.environ or 'COLAB_GPU' in os.environ
+  if IN_COLAB:
+      !pip -q install --index-url https://download.pytorch.org/whl/cpu torch torchvision torchaudio
+      !pip -q install -r https://raw.githubusercontent.com/TerLand0berver/lstc-gait/main/requirements.txt --no-deps
+  ```
 - Sanity check:
 ```bash
 uv run python examples/sanity_check.py

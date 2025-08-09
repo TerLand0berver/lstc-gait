@@ -60,7 +60,18 @@ uv run python -c "import torch;print(torch.cuda.is_available(), torch.cuda.devic
 ```
 
 ### 快速上手
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/TerLand0berver/lstc-gait/blob/main/notebooks/quick_start_safe.ipynb)
 - 提供 Jupyter 笔记本：`notebooks/quick_start_safe.ipynb`（形状健检 + toy 训练/评估）
+- 若在 Colab 运行，建议在第一格添加：
+  ```python
+  # Colab 环境下安装依赖（CPU 版足够）
+  import os
+  IN_COLAB = 'COLAB_RELEASE_TAG' in os.environ or 'COLAB_GPU' in os.environ
+  if IN_COLAB:
+      !pip -q install --index-url https://download.pytorch.org/whl/cpu torch torchvision torchaudio
+      !pip -q install -r https://raw.githubusercontent.com/TerLand0berver/lstc-gait/main/requirements.txt --no-deps
+  ```
 - 形状健检：
 ```bash
 uv run python examples/sanity_check.py
