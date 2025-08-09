@@ -26,22 +26,7 @@ exclude = ["tests*", "examples*", "docs*", "notebooks*", "configs*", "scripts*"]
 [project.scripts]
 lstc = "lstc.cli:main"
 
-[tool.ruff]
-line-length = 100
-target-version = "py311"
-exclude = [
-  "examples",
-  "docs",
-  "notebooks",
-  "configs",
-]
-
-[tool.ruff.lint]
-select = ["E", "F", "I"]
-ignore = []
-
-[tool.ruff.lint.isort]
-known-first-party = ["lstc", "examples"]
+## Ruff removed per user request
 
 [tool.mypy]
 python_version = "3.11"
