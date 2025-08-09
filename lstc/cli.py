@@ -9,6 +9,7 @@ from typing import List
 import torch
 
 from .model import LSTCBackbone
+from torch import nn
 
 
 def _run_script(script: str, argv: List[str]) -> int:
@@ -71,8 +72,16 @@ def cmd_export(args: argparse.Namespace) -> int:
         onnx_out = Path(args.onnx_out)
         onnx_out.parent.mkdir(parents=True, exist_ok=True)
         try:
+            class _EmbeddingOnly(nn.Module):
+                def __init__(self, m: nn.Module) -> None:
+                    super().__init__()
+                    self.m = m
+
+                def forward(self, x: torch.Tensor) -> torch.Tensor:  # type: ignore[override]
+                    return self.m(x)["embedding"]
+
             torch.onnx.export(
-                model,
+                _EmbeddingOnly(model),
                 dummy,
                 str(onnx_out),
                 export_params=True,

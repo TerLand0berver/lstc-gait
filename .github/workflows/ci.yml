@@ -140,7 +140,7 @@ PY
           PYTHONPATH: ${{ github.workspace }}
         run: |
           # Export TorchScript from the CE checkpoint
-          lstc export --ckpt runs/lstc_real/best.pt --seq-len 8 --height 64 --width 44 --torchscript-out runs/export/model.ts
+          lstc export --ckpt runs/lstc_real/best.pt --seq-len 8 --height 64 --width 44 --torchscript-out runs/export/model.ts --onnx-out runs/export/model.onnx --opset 17
           python - <<'PY'
 import torch
 from pathlib import Path
