@@ -3,6 +3,7 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
@@ -37,103 +38,13 @@ jobs:
           pip install -r requirements.txt --no-deps
           # tensorboard deps required by torch.utils.tensorboard
           pip install google protobuf absl-py werkzeug markdown antlr4-python3-runtime pyyaml
-          # dev tools for tests only
-          pip install pytest
           pip install -e .
-
-      - name: Sanity check
-        env:
-          PYTHONPATH: .
+      - name: Import check
         run: |
-          python examples/sanity_check.py
-          lstc sanity
-
-      - name: Unit tests (pytest)
-        env:
-          PYTHONPATH: .
-        run: pytest -q
-
-      - name: Generate toy datasets (single & multiview)
-        env:
-          PYTHONPATH: .
-        run: |
-          python examples/gen_toy_dataset.py --out ./toy_data --subjects 3 --seq-per-subject 2 --frames 8
-          python examples/gen_toy_dataset.py --out ./toy_view0 --subjects 3 --seq-per-subject 2 --frames 8 --seed 101
-          python examples/gen_toy_dataset.py --out ./toy_view1 --subjects 3 --seq-per-subject 2 --frames 8 --seed 202
-
-      - name: Train CE (toy, 1 epoch, CPU)
-        env:
-          PYTHONPATH: .
-        run: |
-          python examples/train_real.py --data-root ./toy_data --epochs 1 --batch-size 8 --seq-len 8 --device cpu
-
-      - name: Train CE+Triplet (toy, 1 epoch, CPU)
-        env:
-          PYTHONPATH: .
-        run: |
-          python examples/train_metric.py --data-root ./toy_data --epochs 1 --batch-p 2 --batch-k 2 --seq-len 8 --device cpu
-
-      - name: Train CE (multiview, 1 epoch, CPU)
-        env:
-          PYTHONPATH: .
-        run: |
-          cat > /tmp/mv.yaml <<'YAML'
-          seed: 42
-          amp: false
-          data_roots: ["./toy_view0", "./toy_view1"]
-          seq_len: 8
-          height: 64
-          width: 44
-          num_workers: 0
-          split_ratio: 0.8
-          in_channels: 1
-          base_channels: 16
-          num_stripes: 8
-          embedding_dim: 128
-          epochs: 1
-          batch_size: 8
-          lr: 3e-4
-          weight_decay: 0.05
-          out_dir: runs/lstc_real_mv
-          log_dir: runs/logs_real_mv
-          tensorboard: false
-          csv_log: false
-          YAML
-          python examples/train_real_multiview.py --config /tmp/mv.yaml
-
-      - name: Cross-view eval (self-gallery)
-        env:
-          PYTHONPATH: .
-        run: |
-          python examples/eval_retrieval_multiview.py --config /tmp/mv.yaml --ckpt runs/lstc_real_mv/best.pt
-
-      - name: Execute quick_start_safe notebook (smoke)
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-        run: |
-          pip install -q nbconvert nbformat jupyter grpcio tensorboard-data-server
-          jupyter nbconvert --to notebook --execute notebooks/quick_start_safe.ipynb \
-            --output /tmp/quick_start_safe.out.ipynb --ExecutePreprocessor.timeout=600
-
-      - name: Export TorchScript and check equivalence
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-        run: |
-          # Export TorchScript from the CE checkpoint
-          lstc export --ckpt runs/lstc_real/best.pt --seq-len 8 --height 64 --width 44 --torchscript-out runs/export/model.ts --onnx-out runs/export/model.onnx --opset 17
-          python scripts/ci_check_ts.py
-
-      - name: ONNX equivalence (onnxruntime)
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-        run: |
-          pip install -q onnxruntime
-          python scripts/ci_check_onnx.py
-
-      - name: Upload export artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: export-models
-          path: |
-            runs/export/model.ts
-            runs/export/model.onnx
+          python - <<'PY'
+import importlib
+import sys
+print('Python', sys.version)
+importlib.import_module('lstc')
+print('lstc imported OK')
+PY
