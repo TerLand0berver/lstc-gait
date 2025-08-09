@@ -16,6 +16,13 @@ dependencies = [
   "antlr4-python3-runtime==4.8",
 ]
 
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+include = ["lstc*"]
+exclude = ["tests*", "examples*", "docs*", "notebooks*", "configs*", "scripts*"]
+
 [project.scripts]
 lstc = "lstc.cli:main"
 
